@@ -1,34 +1,62 @@
-# AI-Diagnostics
+# Automotive AI Diagnostics Platform
 
-A comprehensive tool for diagnosing data quality and model performance.
+A web-based platform connecting car owners with expert mechanics for remote vehicle diagnostics.
+
+## Overview
+
+This application allows car owners to submit detailed reports of their vehicle issues (symptoms, OBD codes, media) and receive professional diagnostic advice from verified experts.
+
+## Key Features
+
+### For Car Owners
+- **Easy Submission**: User-friendly form to input vehicle details (Make, Model, Year, Mileage).
+- **Detailed Reporting**: Describe symptoms and upload relevant photos or videos.
+- **OBD-II Integration**: Input engine codes for more accurate diagnosis.
+- **Status Tracking**: Track the status of your request and view the expert's response using a unique Request ID.
+
+### For Experts (Mechanics)
+- **Dashboard**: View a list of pending diagnostic requests.
+- **Review Tools**: Analyze vehicle data and symptoms.
+- **Response System**: Provide detailed diagnostic reports and recommendations directly to the customer.
+
+## Technology Stack
+
+- **Frontend/Backend**: Streamlit (Python)
+- **Data Storage**: JSON (Local file storage for demo purposes)
 
 ## Installation
 
 1. Clone the repository.
-2. Install the required dependencies:
+2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
 ## Usage
 
-Run the diagnostics tool on your dataset (CSV format):
+1. Run the application:
+   ```bash
+   streamlit run app.py
+   ```
 
-```bash
-python main.py <path_to_your_data.csv>
-```
+2. **Car Owner Flow**:
+   - Go to the **"Car Owner"** tab.
+   - Fill in the vehicle details and symptoms.
+   - Click **"Pay & Submit Request"**.
+   - **Save your Request ID** to check the status later.
 
-## Features
+3. **Expert Flow**:
+   - Go to the **"Expert Dashboard"** tab.
+   - Login with the password: `password123`.
+   - Select a pending request to review.
+   - Type your diagnosis and click **"Send Diagnosis"**.
 
-- **Data Loading**: Supports CSV files.
-- **Missing Value Check**: Identifies missing values in each column.
-- **Data Type Check**: Lists data types for all columns.
-- **Basic Metrics**: Calculates accuracy, precision, recall, and F1 score (assumes binary classification target 'target' exists).
-- **Report Generation**: Generates a summary report in `diagnostic_report.txt`.
+4. **Check Status**:
+   - Go to the **"Check Diagnosis Status"** tab.
+   - Enter your Request ID to see the expert's response.
 
 ## Project Structure
 
-- `src/`: Contains source code for data loading, diagnostics, and reporting.
-- `main.py`: Entry point for the application.
-- `requirements.txt`: List of dependencies.
-- `sample_data.csv`: Sample dataset for testing.
+- `app.py`: Main application entry point.
+- `src/storage.py`: Handles data persistence (saving/loading requests).
+- `requirements.txt`: Python dependencies.
