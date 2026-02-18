@@ -24,24 +24,20 @@ def validate_input(make, model, year, mileage, vin, engine_type, transmission_ty
     errors = []
 
     # Validate Make
-    if not make:
-        errors.append("Car Make is required.")
+    if not make or make == "Select Make":
+        errors.append("Please select a Car Make from the dropdown.")
     elif len(make) > 50:
         errors.append("Car Make must be less than 50 characters.")
-    elif not re.match(r"^[a-zA-Z0-9\s-]+$", make):
-        errors.append("Car Make can only contain alphanumeric characters, spaces, and hyphens.")
 
     # Validate Model
-    if not model:
-        errors.append("Car Model is required.")
+    if not model or model == "Select Model":
+        errors.append("Please select a Car Model from the dropdown.")
     elif len(model) > 50:
         errors.append("Car Model must be less than 50 characters.")
-    elif not re.match(r"^[a-zA-Z0-9\s-]+$", model):
-        errors.append("Car Model can only contain alphanumeric characters, spaces, and hyphens.")
 
     # Validate Year
-    if not isinstance(year, int) or year < 1900 or year > 2025:
-        errors.append("Year must be between 1900 and 2025.")
+    if not isinstance(year, int) or year == 0 or year < 1980 or year > 2025:
+        errors.append("Please select a valid Year from the dropdown.")
 
     # Validate Mileage
     if not isinstance(mileage, int) or mileage < 0:
@@ -79,22 +75,40 @@ def validate_input(make, model, year, mileage, vin, engine_type, transmission_ty
 
     # Validate Symptoms
     if isinstance(symptoms, dict):
-        # Check if at least one symptom is selected or additional details provided
-        has_symptom = False
-        for category in ['power', 'tactile', 'audible', 'fuel', 'visual', 'temperature']:
-            if category in symptoms:
-                for key, value in symptoms[category].items():
-                    if value:
-                        has_symptom = True
-                        break
-                if has_symptom:
-                    break
+        # Check if at least one symptom is selected in each category
+        categories_to_check = ['power', 'tactile', 'audible', 'fuel', 'visual', 'temperature']
+        categories_missing_selection = []
+        all_categories_no_change = True
         
-        additional_details = symptoms.get('additional_details', '')
-        if not has_symptom and not additional_details:
-            errors.append("Please select at least one symptom or provide additional details.")
+        for category in categories_to_check:
+            if category in symptoms:
+                category_symptoms = symptoms[category]
+                has_selection = False
+                has_non_no_change = False
+                
+                for key, value in category_symptoms.items():
+                    if value:  # If any checkbox is checked
+                        has_selection = True
+                        if key != 'no_change':  # Track if there's a selection other than "no change"
+                            has_non_no_change = True
+                
+                if not has_selection:
+                    category_name = category.replace('_', ' ').title()
+                    categories_missing_selection.append(category_name)
+                
+                if has_non_no_change:
+                    all_categories_no_change = False
+        
+        # Error if any category has no selection
+        if categories_missing_selection:
+            errors.append(f"Please select at least one option in the following categories: {', '.join(categories_missing_selection)}")
+        
+        # Error if all categories only have "No change" selected
+        if all_categories_no_change and not categories_missing_selection:
+            errors.append("You cannot select 'No change' in all categories. Please describe at least one symptom in any category.")
         
         # Validate additional details if provided
+        additional_details = symptoms.get('additional_details', '')
         if additional_details:
             if len(additional_details) > 2000:
                 errors.append("Additional details must be less than 2000 characters.")

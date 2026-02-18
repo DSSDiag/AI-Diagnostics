@@ -18,13 +18,64 @@ with tab1:
     st.header("Describe Your Car Issue")
     st.markdown("Get professional diagnostic advice from certified experts.")
 
+    # Australian Market Vehicle Data
+    AUSTRALIAN_MAKES = [
+        "Select Make", "Abarth", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "BYD", "Chery", 
+        "Chevrolet", "Chrysler", "Citroen", "Cupra", "Dacia", "Daewoo", "Daihatsu", "Dodge", "Ferrari", 
+        "Fiat", "Ford", "Genesis", "GWM", "Holden", "Honda", "Hyundai", "Infiniti", "Isuzu", "Jaguar", 
+        "Jeep", "Kia", "Lamborghini", "Land Rover", "LDV", "Lexus", "Mahindra", "Maserati", "Mazda", 
+        "McLaren", "Mercedes-Benz", "MG", "Mini", "Mitsubishi", "Nissan", "Opel", "Peugeot", "Porsche", 
+        "RAM", "Renault", "Rolls-Royce", "Skoda", "SsangYong", "Subaru", "Suzuki", "Tesla", "Toyota", 
+        "Volkswagen", "Volvo", "Other"
+    ]
+    
+    # Popular models by make (simplified for Australian market)
+    MODELS_BY_MAKE = {
+        "Toyota": ["Select Model", "Camry", "Corolla", "RAV4", "Hilux", "Land Cruiser", "Prado", "Kluger", "C-HR", "Yaris", "HiAce", "Fortuner", "86", "Supra", "Other"],
+        "Holden": ["Select Model", "Commodore", "Cruze", "Astra", "Colorado", "Captiva", "Trax", "Barina", "Other"],
+        "Ford": ["Select Model", "Ranger", "Mustang", "Focus", "Fiesta", "Everest", "Escape", "Mondeo", "Territory", "Other"],
+        "Mazda": ["Select Model", "Mazda3", "Mazda6", "CX-3", "CX-5", "CX-9", "CX-30", "CX-60", "BT-50", "MX-5", "2", "Other"],
+        "Hyundai": ["Select Model", "i30", "Tucson", "Santa Fe", "Kona", "Elantra", "Venue", "Palisade", "Staria", "Other"],
+        "Mitsubishi": ["Select Model", "Outlander", "ASX", "Pajero", "Triton", "Eclipse Cross", "Lancer", "Mirage", "Other"],
+        "Nissan": ["Select Model", "X-Trail", "Navara", "Patrol", "Qashqai", "Pathfinder", "Juke", "Leaf", "Altima", "Other"],
+        "Subaru": ["Select Model", "Outback", "Forester", "XV", "Impreza", "WRX", "Liberty", "Levorg", "BRZ", "Other"],
+        "Volkswagen": ["Select Model", "Golf", "Polo", "Tiguan", "Amarok", "Passat", "Transporter", "T-Cross", "Touareg", "Other"],
+        "Honda": ["Select Model", "Civic", "Accord", "CR-V", "HR-V", "Jazz", "City", "Odyssey", "Other"],
+        "Kia": ["Select Model", "Sportage", "Seltos", "Cerato", "Sorento", "Carnival", "Picanto", "Stinger", "Niro", "EV6", "Other"],
+        "BMW": ["Select Model", "3 Series", "5 Series", "X3", "X5", "1 Series", "2 Series", "4 Series", "7 Series", "X1", "X7", "Other"],
+        "Mercedes-Benz": ["Select Model", "C-Class", "E-Class", "GLC", "GLE", "A-Class", "CLA", "GLA", "S-Class", "GLB", "Other"],
+        "Audi": ["Select Model", "A3", "A4", "Q3", "Q5", "Q7", "A5", "A6", "Q2", "e-tron", "Other"],
+        "Tesla": ["Select Model", "Model 3", "Model Y", "Model S", "Model X", "Other"],
+        "Lexus": ["Select Model", "NX", "RX", "UX", "ES", "IS", "LX", "LS", "Other"],
+        "Isuzu": ["Select Model", "D-Max", "MU-X", "Other"],
+        "Jeep": ["Select Model", "Grand Cherokee", "Wrangler", "Cherokee", "Compass", "Gladiator", "Other"],
+        "Land Rover": ["Select Model", "Range Rover", "Range Rover Sport", "Discovery", "Defender", "Evoque", "Discovery Sport", "Other"],
+        "Peugeot": ["Select Model", "308", "3008", "5008", "2008", "208", "Expert", "Other"],
+        "Renault": ["Select Model", "Koleos", "Megane", "Captur", "Kangoo", "Master", "Other"],
+        "Skoda": ["Select Model", "Octavia", "Kodiaq", "Karoq", "Superb", "Fabia", "Scala", "Other"],
+        "MG": ["Select Model", "MG3", "ZS", "HS", "5", "6", "Other"],
+        "GWM": ["Select Model", "Ute", "Haval H6", "Haval Jolion", "Other"],
+        "LDV": ["Select Model", "T60", "D90", "Deliver 9", "G10", "Other"],
+        "BYD": ["Select Model", "Atto 3", "Dolphin", "Seal", "Other"],
+    }
+    
+    YEARS = ["Select Year"] + [str(year) for year in range(2025, 1979, -1)]
+    
     with st.form("diagnostic_request_form"):
         st.subheader("📋 Vehicle Information")
         col1, col2, col3 = st.columns(3)
         with col1:
-            make = st.text_input("Car Make (e.g., Toyota)", placeholder="Toyota")
-            model = st.text_input("Car Model (e.g., Camry)", placeholder="Camry")
-            year = st.number_input("Year", min_value=1900, max_value=2025, step=1, value=2015)
+            make = st.selectbox("Car Make", AUSTRALIAN_MAKES, index=0)
+            
+            # Dynamic model dropdown based on selected make
+            if make in MODELS_BY_MAKE:
+                model_options = MODELS_BY_MAKE[make]
+            else:
+                model_options = ["Select Model", "Other"]
+            model = st.selectbox("Car Model", model_options, index=0)
+            
+            year_str = st.selectbox("Year", YEARS, index=0)
+            year = int(year_str) if year_str != "Select Year" else 0
 
         with col2:
             mileage = st.number_input("Mileage (km/miles)", min_value=0, step=1000)
@@ -38,7 +89,7 @@ with tab1:
 
         st.markdown("---")
         st.subheader("🔍 Symptom Categories")
-        st.markdown("Select all symptoms that apply to your vehicle:")
+        st.markdown("**Select at least one option in each category:**")
         
         # Power Symptoms
         st.markdown("**⚡ Power Symptoms**")
@@ -47,11 +98,11 @@ with tab1:
             power_loss = st.checkbox("Loss of power")
             power_intermittent = st.checkbox("Intermittent power loss")
         with col_p2:
-            power_none = st.checkbox("No power change")
             power_surge = st.checkbox("Power surges")
-        with col_p3:
             power_more = st.checkbox("Increased power (unusual)")
+        with col_p3:
             power_hesitation = st.checkbox("Hesitation/lag")
+            power_no_change = st.checkbox("No change")
         
         # Tactile Symptoms
         st.markdown("**👋 Tactile Symptoms**")
@@ -64,7 +115,9 @@ with tab1:
             tactile_shaking = st.checkbox("Shaking/trembling")
         with col_t3:
             tactile_jerking = st.checkbox("Jerking motion")
+            tactile_hunting = st.checkbox("Hunting")
             tactile_stiff = st.checkbox("Stiff steering/pedals")
+            tactile_no_change = st.checkbox("No change", key="tactile_no_change")
         
         # Audible Symptoms
         st.markdown("**🔊 Audible Symptoms**")
@@ -78,6 +131,7 @@ with tab1:
         with col_a3:
             audible_humming = st.checkbox("Humming/buzzing")
             audible_clicking = st.checkbox("Clicking")
+            audible_no_change = st.checkbox("No change", key="audible_no_change")
         
         # Fuel Consumption Symptoms
         st.markdown("**⛽ Fuel/Consumption Symptoms**")
@@ -91,6 +145,7 @@ with tab1:
         with col_f3:
             fuel_difficulty_starting = st.checkbox("Difficulty starting")
             fuel_stalling = st.checkbox("Engine stalling")
+            fuel_no_change = st.checkbox("No change", key="fuel_no_change")
         
         # Visual Symptoms
         st.markdown("**👁️ Visual Symptoms**")
@@ -104,6 +159,7 @@ with tab1:
         with col_v3:
             visual_fluid_leak = st.checkbox("Fluid leaks")
             visual_corrosion = st.checkbox("Corrosion/rust")
+            visual_no_change = st.checkbox("No change", key="visual_no_change")
         
         # Temperature Symptoms
         st.markdown("**🌡️ Temperature Symptoms**")
@@ -116,6 +172,7 @@ with tab1:
             temp_ac_issues = st.checkbox("A/C not working properly")
         with col_temp3:
             temp_heater_issues = st.checkbox("Heater not working properly")
+            temp_no_change = st.checkbox("No change", key="temp_no_change")
         
         st.markdown("---")
         st.subheader("📝 Additional Details")
@@ -137,10 +194,10 @@ with tab1:
                 "power": {
                     "loss_of_power": power_loss,
                     "intermittent_power_loss": power_intermittent,
-                    "no_power_change": power_none,
                     "power_surges": power_surge,
                     "increased_power": power_more,
-                    "hesitation_lag": power_hesitation
+                    "hesitation_lag": power_hesitation,
+                    "no_change": power_no_change
                 },
                 "tactile": {
                     "vibration": tactile_vibration,
@@ -148,7 +205,9 @@ with tab1:
                     "pulling_to_side": tactile_pulling,
                     "shaking": tactile_shaking,
                     "jerking": tactile_jerking,
-                    "stiff_controls": tactile_stiff
+                    "hunting": tactile_hunting,
+                    "stiff_controls": tactile_stiff,
+                    "no_change": tactile_no_change
                 },
                 "audible": {
                     "rattling": audible_rattling,
@@ -156,7 +215,8 @@ with tab1:
                     "grinding": audible_grinding,
                     "squealing": audible_squealing,
                     "humming": audible_humming,
-                    "clicking": audible_clicking
+                    "clicking": audible_clicking,
+                    "no_change": audible_no_change
                 },
                 "fuel": {
                     "increased_consumption": fuel_increased,
@@ -164,7 +224,8 @@ with tab1:
                     "decreased_mileage": fuel_decreased_mileage,
                     "fuel_leak": fuel_leak,
                     "difficulty_starting": fuel_difficulty_starting,
-                    "stalling": fuel_stalling
+                    "stalling": fuel_stalling,
+                    "no_change": fuel_no_change
                 },
                 "visual": {
                     "white_smoke": visual_smoke_white,
@@ -172,14 +233,16 @@ with tab1:
                     "blue_smoke": visual_smoke_blue,
                     "warning_lights": visual_warning_lights,
                     "fluid_leak": visual_fluid_leak,
-                    "corrosion": visual_corrosion
+                    "corrosion": visual_corrosion,
+                    "no_change": visual_no_change
                 },
                 "temperature": {
                     "overheating": temp_overheating,
                     "running_hot": temp_running_hot,
                     "running_cold": temp_running_cold,
                     "ac_issues": temp_ac_issues,
-                    "heater_issues": temp_heater_issues
+                    "heater_issues": temp_heater_issues,
+                    "no_change": temp_no_change
                 },
                 "additional_details": additional_symptoms
             }
