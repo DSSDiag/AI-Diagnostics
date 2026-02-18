@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 from src.storage import create_request, get_request, get_all_requests, update_request_response
 
+@st.cache_data
+def get_cached_requests():
+    return get_all_requests()
+
 st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_icon="🚗")
 
 st.title("🚗 Automotive Fault Diagnostics")
@@ -65,6 +69,7 @@ with tab1:
                     }
 
                     req_id = create_request(request_data)
+                    get_cached_requests.clear()
                     st.success(f"Payment Successful! Your request has been submitted.")
                     st.balloons()
                     st.markdown(f"**Your Request ID is:** `{req_id}`")
@@ -95,7 +100,7 @@ with tab2:
         st.markdown("---")
         st.subheader("Pending Requests")
 
-        all_requests = get_all_requests()
+        all_requests = get_cached_requests()
         # Convert to DataFrame for easier display
         if all_requests:
             pending_requests = {k: v for k, v in all_requests.items() if v.get('status') == 'pending'}
@@ -124,6 +129,7 @@ with tab2:
                                 if diagnosis:
                                     success = update_request_response(req_id, diagnosis)
                                     if success:
+                                        get_cached_requests.clear()
                                         st.success(f"Diagnosis sent for request {req_id}!")
                                         st.rerun()
                                     else:
