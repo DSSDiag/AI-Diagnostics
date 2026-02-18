@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import os
 from src.storage import create_request, get_request, get_all_requests, update_request_response
 
 st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_icon="🚗")
@@ -60,11 +61,9 @@ with tab1:
                         "engine_type": engine_type,
                         "symptoms": symptoms,
                         "obd_codes": obd_codes,
-                        # For a real app, you'd save file paths here after uploading to S3/Cloud storage
-                        "has_files": True if uploaded_files else False
                     }
 
-                    req_id = create_request(request_data)
+                    req_id = create_request(request_data, files=uploaded_files)
                     st.success(f"Payment Successful! Your request has been submitted.")
                     st.balloons()
                     st.markdown(f"**Your Request ID is:** `{req_id}`")
@@ -113,7 +112,27 @@ with tab2:
                         st.markdown(f"**Symptoms:**\n>{data['symptoms']}")
 
                         if data.get('has_files'):
-                            st.write("📎 *User uploaded files (placeholder)*")
+                            st.write("📎 *User uploaded files:*")
+                            for file_path in data.get('file_paths', []):
+                                try:
+                                    filename = os.path.basename(file_path)
+                                    # Simple check for image extensions
+                                    if any(filename.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.webp']):
+                                        st.image(file_path, caption=filename, use_container_width=True)
+                                    else:
+                                        # For other files, provide a download button
+                                        if os.path.exists(file_path):
+                                            with open(file_path, "rb") as f:
+                                                file_content = f.read()
+                                                st.download_button(
+                                                    label=f"Download {filename}",
+                                                    data=file_content,
+                                                    file_name=filename
+                                                )
+                                        else:
+                                            st.warning(f"File not found: {filename}")
+                                except Exception as e:
+                                    st.error(f"Error loading file: {file_path} - {e}")
 
                         # Response Form
                         with st.form(key=f"response_form_{req_id}"):

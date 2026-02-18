@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 
 DATA_FILE = "diagnostics_data.json"
+UPLOAD_DIR = "uploads"
 
 def _load_data():
     """Loads all data from the JSON file."""
@@ -20,12 +21,41 @@ def _save_data(data):
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=4)
 
-def create_request(data):
+def _save_file(file_obj, request_id):
+    """
+    Saves an uploaded file to the local storage.
+
+    Args:
+        file_obj: The file object (from Streamlit uploader or similar).
+        request_id (str): The ID of the request.
+
+    Returns:
+        str: The relative path to the saved file.
+    """
+    if not os.path.exists(UPLOAD_DIR):
+        os.makedirs(UPLOAD_DIR)
+
+    # Create a directory for this request to avoid name collisions
+    request_dir = os.path.join(UPLOAD_DIR, request_id)
+    if not os.path.exists(request_dir):
+        os.makedirs(request_dir)
+
+    # Sanitize filename to prevent path traversal
+    filename = os.path.basename(file_obj.name)
+    file_path = os.path.join(request_dir, filename)
+
+    with open(file_path, "wb") as f:
+        f.write(file_obj.read())
+
+    return file_path
+
+def create_request(data, files=None):
     """
     Creates a new diagnostic request.
 
     Args:
         data (dict): Dictionary containing car details and symptoms.
+        files (list, optional): List of file objects to upload.
 
     Returns:
         str: The unique request ID.
@@ -37,6 +67,19 @@ def create_request(data):
     data['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     data['status'] = 'pending'
     data['response'] = None
+
+    # Handle file uploads
+    file_paths = []
+    if files:
+        for file_obj in files:
+            try:
+                path = _save_file(file_obj, request_id)
+                file_paths.append(path)
+            except Exception as e:
+                print(f"Error saving file {file_obj.name}: {e}")
+
+    data['file_paths'] = file_paths
+    data['has_files'] = bool(file_paths)
 
     requests[request_id] = data
     _save_data(requests)
