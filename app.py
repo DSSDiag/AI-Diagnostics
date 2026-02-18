@@ -19,7 +19,8 @@ with tab1:
     st.markdown("Get professional diagnostic advice from certified experts.")
 
     with st.form("diagnostic_request_form"):
-        col1, col2 = st.columns(2)
+        st.subheader("📋 Vehicle Information")
+        col1, col2, col3 = st.columns(3)
         with col1:
             make = st.text_input("Car Make (e.g., Toyota)", placeholder="Toyota")
             model = st.text_input("Car Model (e.g., Camry)", placeholder="Camry")
@@ -30,9 +31,95 @@ with tab1:
             vin = st.text_input("VIN (Optional)", placeholder="17-digit VIN")
             engine_type = st.selectbox("Engine Type", ["Gasoline", "Diesel", "Hybrid", "Electric", "Other"])
 
+        with col3:
+            transmission_type = st.selectbox("Transmission", ["Automatic", "Manual", "CVT", "Semi-Automatic", "Unknown"])
+            fuel_type = st.selectbox("Fuel Type", ["Regular", "Premium", "Diesel", "Electric", "Hybrid", "Other"])
+            last_service_date = st.text_input("Last Service Date (Optional)", placeholder="YYYY-MM-DD or e.g., 3 months ago")
+
         st.markdown("---")
-        st.subheader("Symptoms & Details")
-        symptoms = st.text_area("Describe the problem in detail", height=150, placeholder="Example: Car makes a rattling noise when accelerating above 40mph. Check engine light is on.")
+        st.subheader("🔍 Symptom Categories")
+        st.markdown("Select all symptoms that apply to your vehicle:")
+        
+        # Power Symptoms
+        st.markdown("**⚡ Power Symptoms**")
+        col_p1, col_p2, col_p3 = st.columns(3)
+        with col_p1:
+            power_loss = st.checkbox("Loss of power")
+            power_intermittent = st.checkbox("Intermittent power loss")
+        with col_p2:
+            power_none = st.checkbox("No power change")
+            power_surge = st.checkbox("Power surges")
+        with col_p3:
+            power_more = st.checkbox("Increased power (unusual)")
+            power_hesitation = st.checkbox("Hesitation/lag")
+        
+        # Tactile Symptoms
+        st.markdown("**👋 Tactile Symptoms**")
+        col_t1, col_t2, col_t3 = st.columns(3)
+        with col_t1:
+            tactile_vibration = st.checkbox("Vibration")
+            tactile_rough = st.checkbox("Rough engine performance")
+        with col_t2:
+            tactile_pulling = st.checkbox("Pulling to one side")
+            tactile_shaking = st.checkbox("Shaking/trembling")
+        with col_t3:
+            tactile_jerking = st.checkbox("Jerking motion")
+            tactile_stiff = st.checkbox("Stiff steering/pedals")
+        
+        # Audible Symptoms
+        st.markdown("**🔊 Audible Symptoms**")
+        col_a1, col_a2, col_a3 = st.columns(3)
+        with col_a1:
+            audible_rattling = st.checkbox("Rattling")
+            audible_knocking = st.checkbox("Knocking")
+        with col_a2:
+            audible_grinding = st.checkbox("Grinding")
+            audible_squealing = st.checkbox("Squealing/squeaking")
+        with col_a3:
+            audible_humming = st.checkbox("Humming/buzzing")
+            audible_clicking = st.checkbox("Clicking")
+        
+        # Fuel Consumption Symptoms
+        st.markdown("**⛽ Fuel/Consumption Symptoms**")
+        col_f1, col_f2, col_f3 = st.columns(3)
+        with col_f1:
+            fuel_increased = st.checkbox("Increased fuel consumption")
+            fuel_smell = st.checkbox("Fuel smell")
+        with col_f2:
+            fuel_decreased_mileage = st.checkbox("Decreased mileage/efficiency")
+            fuel_leak = st.checkbox("Fuel leak")
+        with col_f3:
+            fuel_difficulty_starting = st.checkbox("Difficulty starting")
+            fuel_stalling = st.checkbox("Engine stalling")
+        
+        # Visual Symptoms
+        st.markdown("**👁️ Visual Symptoms**")
+        col_v1, col_v2, col_v3 = st.columns(3)
+        with col_v1:
+            visual_smoke_white = st.checkbox("White smoke")
+            visual_smoke_black = st.checkbox("Black smoke")
+        with col_v2:
+            visual_smoke_blue = st.checkbox("Blue smoke")
+            visual_warning_lights = st.checkbox("Warning lights on")
+        with col_v3:
+            visual_fluid_leak = st.checkbox("Fluid leaks")
+            visual_corrosion = st.checkbox("Corrosion/rust")
+        
+        # Temperature Symptoms
+        st.markdown("**🌡️ Temperature Symptoms**")
+        col_temp1, col_temp2, col_temp3 = st.columns(3)
+        with col_temp1:
+            temp_overheating = st.checkbox("Engine overheating")
+            temp_running_hot = st.checkbox("Running hotter than normal")
+        with col_temp2:
+            temp_running_cold = st.checkbox("Running colder than normal")
+            temp_ac_issues = st.checkbox("A/C not working properly")
+        with col_temp3:
+            temp_heater_issues = st.checkbox("Heater not working properly")
+        
+        st.markdown("---")
+        st.subheader("📝 Additional Details")
+        additional_symptoms = st.text_area("Describe any additional symptoms or context", height=150, placeholder="Example: The rattling noise only happens when accelerating above 40mph. The check engine light came on yesterday.")
         obd_codes = st.text_input("OBD-II Codes (if known)", placeholder="P0300, P0420")
 
         # File upload placeholder (Streamlit handles file uploads in memory)
@@ -45,7 +132,60 @@ with tab1:
         submitted = st.form_submit_button("Pay & Submit Request")
 
         if submitted:
-            errors = validate_input(make, model, year, mileage, vin, engine_type, symptoms, obd_codes)
+            # Collect all symptoms into structured data
+            symptoms_data = {
+                "power": {
+                    "loss_of_power": power_loss,
+                    "intermittent_power_loss": power_intermittent,
+                    "no_power_change": power_none,
+                    "power_surges": power_surge,
+                    "increased_power": power_more,
+                    "hesitation_lag": power_hesitation
+                },
+                "tactile": {
+                    "vibration": tactile_vibration,
+                    "rough_engine": tactile_rough,
+                    "pulling_to_side": tactile_pulling,
+                    "shaking": tactile_shaking,
+                    "jerking": tactile_jerking,
+                    "stiff_controls": tactile_stiff
+                },
+                "audible": {
+                    "rattling": audible_rattling,
+                    "knocking": audible_knocking,
+                    "grinding": audible_grinding,
+                    "squealing": audible_squealing,
+                    "humming": audible_humming,
+                    "clicking": audible_clicking
+                },
+                "fuel": {
+                    "increased_consumption": fuel_increased,
+                    "fuel_smell": fuel_smell,
+                    "decreased_mileage": fuel_decreased_mileage,
+                    "fuel_leak": fuel_leak,
+                    "difficulty_starting": fuel_difficulty_starting,
+                    "stalling": fuel_stalling
+                },
+                "visual": {
+                    "white_smoke": visual_smoke_white,
+                    "black_smoke": visual_smoke_black,
+                    "blue_smoke": visual_smoke_blue,
+                    "warning_lights": visual_warning_lights,
+                    "fluid_leak": visual_fluid_leak,
+                    "corrosion": visual_corrosion
+                },
+                "temperature": {
+                    "overheating": temp_overheating,
+                    "running_hot": temp_running_hot,
+                    "running_cold": temp_running_cold,
+                    "ac_issues": temp_ac_issues,
+                    "heater_issues": temp_heater_issues
+                },
+                "additional_details": additional_symptoms
+            }
+            
+            errors = validate_input(make, model, year, mileage, vin, engine_type, transmission_type, 
+                                   fuel_type, last_service_date, symptoms_data, obd_codes)
 
             if errors:
                 for error in errors:
@@ -61,7 +201,10 @@ with tab1:
                         "mileage": mileage,
                         "vin": vin,
                         "engine_type": engine_type,
-                        "symptoms": symptoms,
+                        "transmission_type": transmission_type,
+                        "fuel_type": fuel_type,
+                        "last_service_date": last_service_date,
+                        "symptoms": symptoms_data,
                         "obd_codes": obd_codes,
                         # For a real app, you'd save file paths here after uploading to S3/Cloud storage
                         "has_files": True if uploaded_files else False
@@ -109,10 +252,71 @@ with tab2:
                     with st.expander(f"{data['year']} {data['make']} {data['model']} - {req_id[:8]}..."):
                         st.write(f"**Request ID:** {req_id}")
                         st.write(f"**Submitted:** {data.get('timestamp')}")
-                        st.write(f"**Mileage:** {data['mileage']}")
-                        st.write(f"**Engine:** {data['engine_type']}")
-                        st.write(f"**OBD Codes:** {data['obd_codes']}")
-                        st.markdown(f"**Symptoms:**\n>{data['symptoms']}")
+                        
+                        # Vehicle Details
+                        st.markdown("### 🚗 Vehicle Details")
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.write(f"**Make/Model:** {data['make']} {data['model']}")
+                            st.write(f"**Year:** {data['year']}")
+                            st.write(f"**Mileage:** {data['mileage']}")
+                        with col2:
+                            st.write(f"**Engine:** {data['engine_type']}")
+                            st.write(f"**Transmission:** {data.get('transmission_type', 'N/A')}")
+                            st.write(f"**Fuel Type:** {data.get('fuel_type', 'N/A')}")
+                        if data.get('last_service_date'):
+                            st.write(f"**Last Service:** {data['last_service_date']}")
+                        if data.get('obd_codes'):
+                            st.write(f"**OBD Codes:** {data['obd_codes']}")
+                        
+                        # Display Symptoms
+                        st.markdown("### 🔍 Reported Symptoms")
+                        symptoms = data.get('symptoms', {})
+                        
+                        # Handle both old format (string) and new format (dict)
+                        if isinstance(symptoms, str):
+                            st.markdown(f"**General Description:**\n>{symptoms}")
+                        else:
+                            # Power Symptoms
+                            power_symptoms = symptoms.get('power', {})
+                            active_power = [k.replace('_', ' ').title() for k, v in power_symptoms.items() if v and k != 'additional_details']
+                            if active_power:
+                                st.markdown(f"**⚡ Power:** {', '.join(active_power)}")
+                            
+                            # Tactile Symptoms
+                            tactile_symptoms = symptoms.get('tactile', {})
+                            active_tactile = [k.replace('_', ' ').title() for k, v in tactile_symptoms.items() if v]
+                            if active_tactile:
+                                st.markdown(f"**👋 Tactile:** {', '.join(active_tactile)}")
+                            
+                            # Audible Symptoms
+                            audible_symptoms = symptoms.get('audible', {})
+                            active_audible = [k.replace('_', ' ').title() for k, v in audible_symptoms.items() if v]
+                            if active_audible:
+                                st.markdown(f"**🔊 Audible:** {', '.join(active_audible)}")
+                            
+                            # Fuel Symptoms
+                            fuel_symptoms = symptoms.get('fuel', {})
+                            active_fuel = [k.replace('_', ' ').title() for k, v in fuel_symptoms.items() if v]
+                            if active_fuel:
+                                st.markdown(f"**⛽ Fuel/Consumption:** {', '.join(active_fuel)}")
+                            
+                            # Visual Symptoms
+                            visual_symptoms = symptoms.get('visual', {})
+                            active_visual = [k.replace('_', ' ').title() for k, v in visual_symptoms.items() if v]
+                            if active_visual:
+                                st.markdown(f"**👁️ Visual:** {', '.join(active_visual)}")
+                            
+                            # Temperature Symptoms
+                            temp_symptoms = symptoms.get('temperature', {})
+                            active_temp = [k.replace('_', ' ').title() for k, v in temp_symptoms.items() if v]
+                            if active_temp:
+                                st.markdown(f"**🌡️ Temperature:** {', '.join(active_temp)}")
+                            
+                            # Additional Details
+                            additional = symptoms.get('additional_details', '')
+                            if additional:
+                                st.markdown(f"**📝 Additional Details:**\n>{additional}")
 
                         if data.get('has_files'):
                             st.write("📎 *User uploaded files (placeholder)*")
@@ -148,8 +352,68 @@ with tab3:
             if req_data:
                 st.subheader(f"Status: {req_data.get('status', 'Unknown').upper()}")
 
-                st.markdown("### Vehicle Details")
-                st.write(f"{req_data.get('year')} {req_data.get('make')} {req_data.get('model')}")
+                st.markdown("### 🚗 Vehicle Details")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"**Vehicle:** {req_data.get('year')} {req_data.get('make')} {req_data.get('model')}")
+                    st.write(f"**Mileage:** {req_data.get('mileage')}")
+                    st.write(f"**Engine:** {req_data.get('engine_type')}")
+                with col2:
+                    if req_data.get('transmission_type'):
+                        st.write(f"**Transmission:** {req_data.get('transmission_type')}")
+                    if req_data.get('fuel_type'):
+                        st.write(f"**Fuel Type:** {req_data.get('fuel_type')}")
+                    if req_data.get('last_service_date'):
+                        st.write(f"**Last Service:** {req_data.get('last_service_date')}")
+                
+                # Display Symptoms
+                st.markdown("### 🔍 Reported Symptoms")
+                symptoms = req_data.get('symptoms', {})
+                
+                # Handle both old format (string) and new format (dict)
+                if isinstance(symptoms, str):
+                    st.markdown(f"**Description:**\n>{symptoms}")
+                else:
+                    # Power Symptoms
+                    power_symptoms = symptoms.get('power', {})
+                    active_power = [k.replace('_', ' ').title() for k, v in power_symptoms.items() if v]
+                    if active_power:
+                        st.markdown(f"**⚡ Power:** {', '.join(active_power)}")
+                    
+                    # Tactile Symptoms
+                    tactile_symptoms = symptoms.get('tactile', {})
+                    active_tactile = [k.replace('_', ' ').title() for k, v in tactile_symptoms.items() if v]
+                    if active_tactile:
+                        st.markdown(f"**👋 Tactile:** {', '.join(active_tactile)}")
+                    
+                    # Audible Symptoms
+                    audible_symptoms = symptoms.get('audible', {})
+                    active_audible = [k.replace('_', ' ').title() for k, v in audible_symptoms.items() if v]
+                    if active_audible:
+                        st.markdown(f"**🔊 Audible:** {', '.join(active_audible)}")
+                    
+                    # Fuel Symptoms
+                    fuel_symptoms = symptoms.get('fuel', {})
+                    active_fuel = [k.replace('_', ' ').title() for k, v in fuel_symptoms.items() if v]
+                    if active_fuel:
+                        st.markdown(f"**⛽ Fuel/Consumption:** {', '.join(active_fuel)}")
+                    
+                    # Visual Symptoms
+                    visual_symptoms = symptoms.get('visual', {})
+                    active_visual = [k.replace('_', ' ').title() for k, v in visual_symptoms.items() if v]
+                    if active_visual:
+                        st.markdown(f"**👁️ Visual:** {', '.join(active_visual)}")
+                    
+                    # Temperature Symptoms
+                    temp_symptoms = symptoms.get('temperature', {})
+                    active_temp = [k.replace('_', ' ').title() for k, v in temp_symptoms.items() if v]
+                    if active_temp:
+                        st.markdown(f"**🌡️ Temperature:** {', '.join(active_temp)}")
+                    
+                    # Additional Details
+                    additional = symptoms.get('additional_details', '')
+                    if additional:
+                        st.markdown(f"**📝 Additional Details:**\n>{additional}")
 
                 if req_data.get('status') == 'completed':
                     st.markdown("---")

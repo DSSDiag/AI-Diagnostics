@@ -1,6 +1,7 @@
 import re
 
-def validate_input(make, model, year, mileage, vin, engine_type, symptoms, obd_codes):
+def validate_input(make, model, year, mileage, vin, engine_type, transmission_type, 
+                   fuel_type, last_service_date, symptoms, obd_codes):
     """
     Validates the input data for a diagnostic request.
 
@@ -11,7 +12,10 @@ def validate_input(make, model, year, mileage, vin, engine_type, symptoms, obd_c
         mileage (int): Car mileage.
         vin (str): Vehicle Identification Number (optional).
         engine_type (str): Engine type.
-        symptoms (str): Description of the problem.
+        transmission_type (str): Transmission type.
+        fuel_type (str): Fuel type.
+        last_service_date (str): Last service date (optional).
+        symptoms (dict): Dictionary of symptoms organized by category.
         obd_codes (str): OBD-II codes (optional).
 
     Returns:
@@ -55,14 +59,55 @@ def validate_input(make, model, year, mileage, vin, engine_type, symptoms, obd_c
     if engine_type not in valid_engines:
         errors.append("Invalid Engine Type selected.")
 
+    # Validate Transmission Type
+    valid_transmissions = ["Automatic", "Manual", "CVT", "Semi-Automatic", "Unknown"]
+    if transmission_type not in valid_transmissions:
+        errors.append("Invalid Transmission Type selected.")
+
+    # Validate Fuel Type
+    valid_fuel_types = ["Regular", "Premium", "Diesel", "Electric", "Hybrid", "Other"]
+    if fuel_type not in valid_fuel_types:
+        errors.append("Invalid Fuel Type selected.")
+
+    # Validate Last Service Date (Optional)
+    if last_service_date:
+        if len(last_service_date) > 100:
+            errors.append("Last Service Date must be less than 100 characters.")
+        # Basic check for potentially malicious content
+        elif re.search(r"<script.*?>", last_service_date, re.IGNORECASE):
+            errors.append("Invalid characters detected in Last Service Date.")
+
     # Validate Symptoms
-    if not symptoms:
-        errors.append("Symptoms description is required.")
-    elif len(symptoms) > 1000:
-        errors.append("Symptoms description must be less than 1000 characters.")
-    # Check for potential XSS (basic check for script tags)
-    elif re.search(r"<script.*?>", symptoms, re.IGNORECASE):
-        errors.append("Invalid characters detected in Symptoms.")
+    if isinstance(symptoms, dict):
+        # Check if at least one symptom is selected or additional details provided
+        has_symptom = False
+        for category in ['power', 'tactile', 'audible', 'fuel', 'visual', 'temperature']:
+            if category in symptoms:
+                for key, value in symptoms[category].items():
+                    if value:
+                        has_symptom = True
+                        break
+                if has_symptom:
+                    break
+        
+        additional_details = symptoms.get('additional_details', '')
+        if not has_symptom and not additional_details:
+            errors.append("Please select at least one symptom or provide additional details.")
+        
+        # Validate additional details if provided
+        if additional_details:
+            if len(additional_details) > 2000:
+                errors.append("Additional details must be less than 2000 characters.")
+            elif re.search(r"<script.*?>", additional_details, re.IGNORECASE):
+                errors.append("Invalid characters detected in additional details.")
+    else:
+        # Fallback for old string format (backward compatibility)
+        if not symptoms:
+            errors.append("Symptoms description is required.")
+        elif len(symptoms) > 1000:
+            errors.append("Symptoms description must be less than 1000 characters.")
+        elif re.search(r"<script.*?>", symptoms, re.IGNORECASE):
+            errors.append("Invalid characters detected in Symptoms.")
 
     # Validate OBD Codes (Optional)
     if obd_codes:
