@@ -70,3 +70,22 @@ def update_request_response(request_id, response_text):
         _save_data(requests)
         return True
     return False
+
+def update_request_files(request_id, filenames):
+    """
+    Updates a request with uploaded file names.
+
+    Args:
+        request_id (str): The ID of the request to update.
+        filenames (list): List of filenames uploaded.
+
+    Returns:
+        bool: True if successful, False if request not found.
+    """
+    requests = _load_data()
+    if request_id in requests:
+        requests[request_id]['has_files'] = True
+        requests[request_id]['files'] = filenames
+        _save_data(requests)
+        return True
+    return False
