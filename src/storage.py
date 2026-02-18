@@ -3,7 +3,7 @@ import os
 import uuid
 from datetime import datetime
 
-DATA_FILE = "diagnostics_data.json"
+DATA_FILE = os.getenv("DIAGNOSTICS_DATA_FILE", "diagnostics_data.json")
 
 def _load_data():
     """Loads all data from the JSON file."""
