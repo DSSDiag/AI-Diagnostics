@@ -1,6 +1,4 @@
 import streamlit as st
-import uuid
-import pandas as pd
 from src.storage import create_request, get_request, get_all_requests, update_request_response
 
 st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_icon="🚗")
