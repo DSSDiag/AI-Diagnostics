@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 from src.storage import create_request, get_request, get_all_requests, update_request_response
 from src.validation import validate_input
 
@@ -100,7 +99,6 @@ with tab2:
         st.subheader("Pending Requests")
 
         all_requests = get_all_requests()
-        # Convert to DataFrame for easier display
         if all_requests:
             pending_requests = {k: v for k, v in all_requests.items() if v.get('status') == 'pending'}
 
