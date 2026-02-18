@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2 class="mb-4">Check Diagnosis Status</h2>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form action="/status" method="POST" class="d-flex gap-2">
+                    <input type="text" class="form-control" name="check_id" placeholder="Enter your Request ID" required value="{{ request_id if request_id else '' }}">
+                    <button type="submit" class="btn btn-primary">Check Status</button>
+                </form>
+            </div>
+        </div>
+
+        {% if req_data %}
+            <div class="card shadow">
+                <div class="card-header bg-{{ 'success' if req_data.status == 'completed' else 'warning' }} text-white">
+                    Status: {{ req_data.status|upper }}
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ req_data.year }} {{ req_data.make }} {{ req_data.model }}</h5>
+                    <p class="text-muted mb-4">Request ID: {{ check_id }}</p>
+
+                    {% if req_data.status == 'completed' %}
+                        <div class="alert alert-success">
+                            <h4 class="alert-heading">✅ Expert Diagnosis</h4>
+                            <hr>
+                            <p class="mb-0" style="white-space: pre-wrap;">{{ req_data.response }}</p>
+                        </div>
+                        <p class="text-muted small">Responded on: {{ req_data.response_timestamp }}</p>
+                    {% else %}
+                        <div class="alert alert-info">
+                            Your request is currently being reviewed by an expert. Please check back later.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% elif not_found %}
+            <div class="alert alert-danger">
+                Request ID not found. Please check and try again.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
