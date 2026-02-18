@@ -1,0 +1,18 @@
+{
+    "975d3568-7f97-4359-8016-d9f709ceebfc": {
+        "make": "Toyota",
+        "model": "Camry",
+        "year": 2015,
+        "mileage": 50000,
+        "vin": "12345",
+        "engine_type": "Gasoline",
+        "symptoms": "Strange noise",
+        "obd_codes": "P0101",
+        "has_files": false,
+        "request_id": "975d3568-7f97-4359-8016-d9f709ceebfc",
+        "timestamp": "2026-02-17 22:11:34",
+        "status": "completed",
+        "response": "Check the air intake system.",
+        "response_timestamp": "2026-02-17 22:11:34"
+    }
+}
