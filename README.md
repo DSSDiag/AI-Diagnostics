@@ -21,7 +21,7 @@ This application allows car owners to submit detailed reports of their vehicle i
 
 ## Technology Stack
 
-- **Frontend/Backend**: Streamlit (Python)
+- **Frontend/Backend**: Streamlit (100% Python)
 - **Data Storage**: JSON (Local file storage for demo purposes)
 
 ## Installation

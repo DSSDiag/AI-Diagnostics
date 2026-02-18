@@ -1,150 +1,162 @@
-import os
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory
-from werkzeug.utils import secure_filename
-from src.storage import create_request, get_request, get_all_requests, update_request_response, update_request_files
+import streamlit as st
+from src.storage import create_request, get_request, get_all_requests, update_request_response
 from src.validation import validate_input
 
-app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'dev_key_only')
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
+st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_icon="🚗")
 
+st.title("🚗 Automotive Fault Diagnostics")
+
+# Mock User Login for Expert
+# In a real app, this would use a secure authentication system.
 EXPERT_PASSWORD = "password123"
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Tabs for different user roles
+tab1, tab2, tab3 = st.tabs(["Car Owner (Submit Issue)", "Expert Dashboard (For Mechanics)", "Check Diagnosis Status"])
 
-@app.route('/submit', methods=['POST'])
-def submit_request():
-    make = request.form.get('make')
-    model = request.form.get('model')
-    try:
-        year = int(request.form.get('year'))
-    except (ValueError, TypeError):
-        year = 0
-    try:
-        mileage = int(request.form.get('mileage'))
-    except (ValueError, TypeError):
-        mileage = -1
+# --- TAB 1: CAR OWNER ---
+with tab1:
+    st.header("Describe Your Car Issue")
+    st.markdown("Get professional diagnostic advice from certified experts.")
 
-    vin = request.form.get('vin')
-    engine_type = request.form.get('engine_type')
-    symptoms = request.form.get('symptoms')
-    obd_codes = request.form.get('obd_codes')
+    with st.form("diagnostic_request_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            make = st.text_input("Car Make (e.g., Toyota)", placeholder="Toyota")
+            model = st.text_input("Car Model (e.g., Camry)", placeholder="Camry")
+            year = st.number_input("Year", min_value=1900, max_value=2025, step=1, value=2015)
 
-    # Handle files
-    uploaded_files = request.files.getlist('files')
-    filenames = []
+        with col2:
+            mileage = st.number_input("Mileage (km/miles)", min_value=0, step=1000)
+            vin = st.text_input("VIN (Optional)", placeholder="17-digit VIN")
+            engine_type = st.selectbox("Engine Type", ["Gasoline", "Diesel", "Hybrid", "Electric", "Other"])
 
-    # Validation
-    errors = validate_input(make, model, year, mileage, vin, engine_type, symptoms, obd_codes)
+        st.markdown("---")
+        st.subheader("Symptoms & Details")
+        symptoms = st.text_area("Describe the problem in detail", height=150, placeholder="Example: Car makes a rattling noise when accelerating above 40mph. Check engine light is on.")
+        obd_codes = st.text_input("OBD-II Codes (if known)", placeholder="P0300, P0420")
 
-    if errors:
-        for error in errors:
-            flash(error, 'danger')
-        return redirect(url_for('index'))
+        # File upload placeholder (Streamlit handles file uploads in memory)
+        uploaded_files = st.file_uploader("Upload Photos/Videos/Audio of the issue", accept_multiple_files=True)
 
-    # Create request data
-    request_data = {
-        "make": make,
-        "model": model,
-        "year": year,
-        "mileage": mileage,
-        "vin": vin,
-        "engine_type": engine_type,
-        "symptoms": symptoms,
-        "obd_codes": obd_codes,
-        "has_files": False,
-        "files": []
-    }
+        # Payment Simulation
+        st.markdown("### Payment")
+        st.info("Consultation Fee: $20.00")
 
-    req_id = create_request(request_data)
+        submitted = st.form_submit_button("Pay & Submit Request")
 
-    # Handle File Uploads
-    if uploaded_files and uploaded_files[0].filename != '':
-        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], req_id)
-        os.makedirs(upload_path, exist_ok=True)
+        if submitted:
+            errors = validate_input(make, model, year, mileage, vin, engine_type, symptoms, obd_codes)
 
-        for file in uploaded_files:
-            if file.filename:
-                filename = secure_filename(file.filename)
-                file.save(os.path.join(upload_path, filename))
-                filenames.append(filename)
+            if errors:
+                for error in errors:
+                    st.error(error)
+            else:
+                # Simulate Payment Success
+                with st.spinner("Processing Payment..."):
+                    # Create request object
+                    request_data = {
+                        "make": make,
+                        "model": model,
+                        "year": year,
+                        "mileage": mileage,
+                        "vin": vin,
+                        "engine_type": engine_type,
+                        "symptoms": symptoms,
+                        "obd_codes": obd_codes,
+                        # For a real app, you'd save file paths here after uploading to S3/Cloud storage
+                        "has_files": True if uploaded_files else False
+                    }
 
-        # Update the request with file info
-        update_request_files(req_id, filenames)
+                    req_id = create_request(request_data)
+                    st.success(f"Payment Successful! Your request has been submitted.")
+                    st.balloons()
+                    st.markdown(f"**Your Request ID is:** `{req_id}`")
+                    st.warning("Please save this ID to check your diagnosis status later.")
 
-    return render_template('success.html', request_id=req_id)
+# --- TAB 2: EXPERT DASHBOARD ---
+with tab2:
+    st.header("Expert Dashboard")
 
-@app.route('/expert')
-def expert_index():
-    if session.get('expert_logged_in'):
-        return redirect(url_for('expert_dashboard'))
-    return redirect(url_for('expert_login'))
+    # Simple Authentication Check
+    if 'expert_logged_in' not in st.session_state:
+        st.session_state['expert_logged_in'] = False
 
-@app.route('/expert/login', methods=['GET', 'POST'])
-def expert_login():
-    if request.method == 'POST':
-        password = request.form.get('password')
-        if password == EXPERT_PASSWORD:
-            session['expert_logged_in'] = True
-            return redirect(url_for('expert_dashboard'))
-        else:
-            flash('Incorrect password.', 'danger')
-    return render_template('expert_login.html')
-
-@app.route('/expert/logout')
-def expert_logout():
-    session.pop('expert_logged_in', None)
-    return redirect(url_for('expert_login'))
-
-@app.route('/expert/dashboard')
-def expert_dashboard():
-    if not session.get('expert_logged_in'):
-        return redirect(url_for('expert_login'))
-
-    all_requests = get_all_requests()
-    pending_requests = {k: v for k, v in all_requests.items() if v.get('status') == 'pending'}
-
-    return render_template('expert_dashboard.html', pending_requests=pending_requests)
-
-@app.route('/expert/reply/<req_id>', methods=['POST'])
-def expert_reply(req_id):
-    if not session.get('expert_logged_in'):
-        return redirect(url_for('expert_login'))
-
-    diagnosis = request.form.get('diagnosis')
-    if diagnosis:
-        success = update_request_response(req_id, diagnosis)
-        if success:
-            flash(f'Diagnosis sent for request {req_id}!', 'success')
-        else:
-            flash('Failed to update request.', 'danger')
+    if not st.session_state['expert_logged_in']:
+        password = st.text_input("Enter Expert Password", type="password")
+        if st.button("Login"):
+            if password == EXPERT_PASSWORD:
+                st.session_state['expert_logged_in'] = True
+                st.rerun()
+            else:
+                st.error("Incorrect password.")
     else:
-        flash('Please enter a diagnosis.', 'warning')
+        st.success("Logged in as Expert")
+        if st.button("Logout"):
+            st.session_state['expert_logged_in'] = False
+            st.rerun()
 
-    return redirect(url_for('expert_dashboard'))
+        st.markdown("---")
+        st.subheader("Pending Requests")
 
-@app.route('/status', methods=['GET', 'POST'])
-def check_status():
-    req_data = None
-    check_id = None
-    not_found = False
+        all_requests = get_all_requests()
+        if all_requests:
+            pending_requests = {k: v for k, v in all_requests.items() if v.get('status') == 'pending'}
 
-    if request.method == 'POST':
-        check_id = request.form.get('check_id', '').strip()
+            if not pending_requests:
+                st.info("No pending requests.")
+            else:
+                for req_id, data in pending_requests.items():
+                    with st.expander(f"{data['year']} {data['make']} {data['model']} - {req_id[:8]}..."):
+                        st.write(f"**Request ID:** {req_id}")
+                        st.write(f"**Submitted:** {data.get('timestamp')}")
+                        st.write(f"**Mileage:** {data['mileage']}")
+                        st.write(f"**Engine:** {data['engine_type']}")
+                        st.write(f"**OBD Codes:** {data['obd_codes']}")
+                        st.markdown(f"**Symptoms:**\n>{data['symptoms']}")
+
+                        if data.get('has_files'):
+                            st.write("📎 *User uploaded files (placeholder)*")
+
+                        # Response Form
+                        with st.form(key=f"response_form_{req_id}"):
+                            diagnosis = st.text_area("Expert Diagnosis & Recommendation", height=200, placeholder="Enter your detailed diagnosis here...")
+                            submit_diagnosis = st.form_submit_button("Send Diagnosis")
+
+                            if submit_diagnosis:
+                                if diagnosis:
+                                    success = update_request_response(req_id, diagnosis)
+                                    if success:
+                                        st.success(f"Diagnosis sent for request {req_id}!")
+                                        st.rerun()
+                                    else:
+                                        st.error("Failed to update request.")
+                                else:
+                                    st.warning("Please enter a diagnosis.")
+        else:
+            st.info("No requests found.")
+
+# --- TAB 3: CHECK STATUS ---
+with tab3:
+    st.header("Check Your Diagnosis Status")
+
+    check_id = st.text_input("Enter your Request ID")
+
+    if st.button("Check Status"):
         if check_id:
-            req_data = get_request(check_id)
-            if not req_data:
-                not_found = True
+            req_data = get_request(check_id.strip())
 
-    return render_template('status.html', req_data=req_data, check_id=check_id, not_found=not_found)
+            if req_data:
+                st.subheader(f"Status: {req_data.get('status', 'Unknown').upper()}")
 
-@app.route('/uploads/<path:filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+                st.markdown("### Vehicle Details")
+                st.write(f"{req_data.get('year')} {req_data.get('make')} {req_data.get('model')}")
 
-if __name__ == '__main__':
-    debug_mode = os.environ.get('FLASK_DEBUG', 'False') == 'True'
-    app.run(debug=debug_mode, port=5000)
+                if req_data.get('status') == 'completed':
+                    st.markdown("---")
+                    st.subheader("✅ Expert Diagnosis")
+                    st.info(req_data.get('response'))
+                    st.caption(f"Responded on: {req_data.get('response_timestamp')}")
+                else:
+                    st.info("Your request is currently being reviewed by an expert. Please check back later.")
+            else:
+                st.error("Request ID not found. Please check and try again.")
