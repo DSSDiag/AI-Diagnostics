@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from src.storage import create_request, get_request, get_all_requests, update_request_response
+from src.validators import validate_make, validate_model, validate_vin, validate_symptoms, validate_obd_codes
 
 st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_icon="🚗")
 
@@ -45,8 +46,23 @@ with tab1:
         submitted = st.form_submit_button("Pay & Submit Request")
 
         if submitted:
-            if not make or not model or not symptoms:
-                st.error("Please fill in at least Make, Model, and Symptoms.")
+            # Validate inputs
+            is_valid_make, make_msg = validate_make(make)
+            is_valid_model, model_msg = validate_model(model)
+            is_valid_vin, vin_msg = validate_vin(vin)
+            is_valid_symptoms, symptoms_msg = validate_symptoms(symptoms)
+            is_valid_obd, obd_msg = validate_obd_codes(obd_codes)
+
+            errors = []
+            if not is_valid_make: errors.append(make_msg)
+            if not is_valid_model: errors.append(model_msg)
+            if not is_valid_vin: errors.append(vin_msg)
+            if not is_valid_symptoms: errors.append(symptoms_msg)
+            if not is_valid_obd: errors.append(obd_msg)
+
+            if errors:
+                for error in errors:
+                    st.error(error)
             else:
                 # Simulate Payment Success
                 with st.spinner("Processing Payment..."):
