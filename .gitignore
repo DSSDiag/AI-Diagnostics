@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 diagnostic_report.txt
+diagnostics_data.json
+streamlit.log
+verification/
