@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from src.storage import create_request, get_request, get_all_requests, update_request_response
+from src.auth import verify_password
 
 st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_icon="🚗")
 
@@ -8,7 +9,10 @@ st.title("🚗 Automotive Fault Diagnostics")
 
 # Mock User Login for Expert
 # In a real app, this would use a secure authentication system.
-EXPERT_PASSWORD = "password123"
+# Using PBKDF2-HMAC-SHA256 hash for "password123"
+# In production, these should be loaded from environment variables or st.secrets
+EXPERT_PASSWORD_SALT = "90e84d70e0171cb809e2f0b8ab9580e5912fb23a6dbcdcd8c3434e31522eea07"
+EXPERT_PASSWORD_HASH = "346b43bb4831a72ddafa2f9605342d7ac33d36d05210d7c7a8b5864ced2a7e50"
 
 # Tabs for different user roles
 tab1, tab2, tab3 = st.tabs(["Car Owner (Submit Issue)", "Expert Dashboard (For Mechanics)", "Check Diagnosis Status"])
@@ -81,7 +85,7 @@ with tab2:
     if not st.session_state['expert_logged_in']:
         password = st.text_input("Enter Expert Password", type="password")
         if st.button("Login"):
-            if password == EXPERT_PASSWORD:
+            if verify_password(EXPERT_PASSWORD_SALT, EXPERT_PASSWORD_HASH, password):
                 st.session_state['expert_logged_in'] = True
                 st.rerun()
             else:
