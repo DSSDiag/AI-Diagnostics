@@ -279,7 +279,7 @@ with tab2:
                         else:
                             # Power Symptoms
                             power_symptoms = symptoms.get('power', {})
-                            active_power = [k.replace('_', ' ').title() for k, v in power_symptoms.items() if v and k != 'additional_details']
+                            active_power = [k.replace('_', ' ').title() for k, v in power_symptoms.items() if v]
                             if active_power:
                                 st.markdown(f"**⚡ Power:** {', '.join(active_power)}")
                             
