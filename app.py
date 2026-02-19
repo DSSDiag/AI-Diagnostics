@@ -549,7 +549,10 @@ with tab4:
             for i, (req_id, data) in enumerate(sorted_requests[:10]):
                 status_icon = "✅" if data.get('status') == 'completed' else "⏳"
                 status = data.get('status', 'unknown')
-                st.markdown(f"{status_icon} **{data['year']} {data['make']} {data['model']}** - {data.get('timestamp')} - Status: {status.upper()}")
+                year = data.get('year', 'N/A')
+                make = data.get('make', 'Unknown')
+                model = data.get('model', 'Unknown')
+                st.markdown(f"{status_icon} **{year} {make} {model}** - {data.get('timestamp')} - Status: {status.upper()}")
         else:
             st.info("No activity yet.")
         
@@ -583,7 +586,10 @@ with tab4:
             # Display detailed information for each request
             for req_id, data in sorted_filtered:
                 status_color = "🟢" if data.get('status') == 'completed' else "🟡"
-                with st.expander(f"{status_color} {data['year']} {data['make']} {data['model']} - ID: {req_id[:12]}..."):
+                year = data.get('year', 'N/A')
+                make = data.get('make', 'Unknown')
+                model = data.get('model', 'Unknown')
+                with st.expander(f"{status_color} {year} {make} {model} - ID: {req_id[:12]}..."):
                     # Request metadata
                     st.markdown("### Request Information")
                     meta_col1, meta_col2 = st.columns(2)
@@ -601,12 +607,12 @@ with tab4:
                     st.markdown("### 🚗 Vehicle Details")
                     veh_col1, veh_col2, veh_col3 = st.columns(3)
                     with veh_col1:
-                        st.write(f"**Make:** {data['make']}")
-                        st.write(f"**Model:** {data['model']}")
-                        st.write(f"**Year:** {data['year']}")
+                        st.write(f"**Make:** {data.get('make', 'Unknown')}")
+                        st.write(f"**Model:** {data.get('model', 'Unknown')}")
+                        st.write(f"**Year:** {data.get('year', 'N/A')}")
                     with veh_col2:
-                        st.write(f"**Mileage:** {data['mileage']} km")
-                        st.write(f"**Engine:** {data['engine_type']}")
+                        st.write(f"**Mileage:** {data.get('mileage', 0)} km")
+                        st.write(f"**Engine:** {data.get('engine_type', 'Unknown')}")
                         if data.get('vin'):
                             st.write(f"**VIN:** {data.get('vin')}")
                     with veh_col3:
