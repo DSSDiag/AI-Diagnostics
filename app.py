@@ -548,7 +548,8 @@ with tab4:
             st.markdown("**Latest 10 Requests:**")
             for i, (req_id, data) in enumerate(sorted_requests[:10]):
                 status_icon = "✅" if data.get('status') == 'completed' else "⏳"
-                st.markdown(f"{status_icon} **{data['year']} {data['make']} {data['model']}** - {data.get('timestamp')} - Status: {data.get('status').upper()}")
+                status = data.get('status', 'unknown')
+                st.markdown(f"{status_icon} **{data['year']} {data['make']} {data['model']}** - {data.get('timestamp')} - Status: {status.upper()}")
         else:
             st.info("No activity yet.")
         
@@ -589,7 +590,8 @@ with tab4:
                     with meta_col1:
                         st.write(f"**Request ID:** `{req_id}`")
                         st.write(f"**Submitted:** {data.get('timestamp')}")
-                        st.write(f"**Status:** {data.get('status').upper()}")
+                        status = data.get('status', 'unknown')
+                        st.write(f"**Status:** {status.upper()}")
                     with meta_col2:
                         if data.get('status') == 'completed':
                             st.write(f"**Responded:** {data.get('response_timestamp')}")
