@@ -99,7 +99,7 @@ with tab1:
             power_intermittent = st.checkbox("Intermittent power loss")
         with col_p2:
             power_surge = st.checkbox("Power surges")
-            power_more = st.checkbox("Increased power (unusual)")
+            power_more = st.checkbox("Increased power")
         with col_p3:
             power_hesitation = st.checkbox("Hesitation/lag")
             power_no_change = st.checkbox("No change")
