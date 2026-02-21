@@ -6,12 +6,13 @@ st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_i
 
 st.title("🚗 Automotive Fault Diagnostics")
 
-# Mock User Login for Expert
+# Mock User Login for Expert and Admin
 # In a real app, this would use a secure authentication system.
 EXPERT_PASSWORD = "password123"
+ADMIN_PASSWORD = "admin456"
 
 # Tabs for different user roles
-tab1, tab2, tab3 = st.tabs(["Car Owner (Submit Issue)", "Expert Dashboard (For Mechanics)", "Check Diagnosis Status"])
+tab1, tab2, tab3, tab4 = st.tabs(["Car Owner (Submit Issue)", "Expert Dashboard (For Mechanics)", "Check Diagnosis Status", "Admin Area"])
 
 # --- TAB 1: CAR OWNER ---
 with tab1:
@@ -487,3 +488,195 @@ with tab3:
                     st.info("Your request is currently being reviewed by an expert. Please check back later.")
             else:
                 st.error("Request ID not found. Please check and try again.")
+
+# --- TAB 4: ADMIN AREA ---
+with tab4:
+    st.header("🔐 Admin Area")
+    st.markdown("Administrative dashboard for webapp monitoring and management")
+    
+    # Simple Authentication Check
+    if 'admin_logged_in' not in st.session_state:
+        st.session_state['admin_logged_in'] = False
+    
+    if not st.session_state['admin_logged_in']:
+        password = st.text_input("Enter Admin Password", type="password", key="admin_password")
+        if st.button("Login as Admin"):
+            if password == ADMIN_PASSWORD:
+                st.session_state['admin_logged_in'] = True
+                st.rerun()
+            else:
+                st.error("Incorrect admin password.")
+    else:
+        st.success("Logged in as Administrator")
+        if st.button("Logout", key="admin_logout"):
+            st.session_state['admin_logged_in'] = False
+            st.rerun()
+        
+        st.markdown("---")
+        
+        # Get all requests for statistics
+        all_requests = get_all_requests()
+        
+        # Calculate statistics
+        total_requests = len(all_requests)
+        pending_count = sum(1 for req in all_requests.values() if req.get('status') == 'pending')
+        completed_count = sum(1 for req in all_requests.values() if req.get('status') == 'completed')
+        
+        # Display key metrics
+        st.subheader("📊 Key Metrics")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Requests", total_requests)
+        with col2:
+            st.metric("Pending Requests", pending_count)
+        with col3:
+            st.metric("Completed Requests", completed_count)
+        
+        st.markdown("---")
+        
+        # Activity Overview
+        st.subheader("📈 Recent Activity")
+        if all_requests:
+            # Sort requests by timestamp (most recent first)
+            sorted_requests = sorted(
+                all_requests.items(), 
+                key=lambda x: x[1].get('timestamp', ''), 
+                reverse=True
+            )
+            
+            # Show recent activity timeline
+            st.markdown("**Latest 10 Requests:**")
+            for i, (req_id, data) in enumerate(sorted_requests[:10]):
+                status_icon = "✅" if data.get('status') == 'completed' else "⏳"
+                status = data.get('status', 'unknown')
+                year = data.get('year', 'N/A')
+                make = data.get('make', 'Unknown')
+                model = data.get('model', 'Unknown')
+                st.markdown(f"{status_icon} **{year} {make} {model}** - {data.get('timestamp')} - Status: {status.upper()}")
+        else:
+            st.info("No activity yet.")
+        
+        st.markdown("---")
+        
+        # Detailed Request List
+        st.subheader("🗂️ All Requests Details")
+        
+        if all_requests:
+            # Filter options
+            filter_col1, filter_col2 = st.columns(2)
+            with filter_col1:
+                status_filter = st.selectbox("Filter by Status", ["All", "Pending", "Completed"])
+            with filter_col2:
+                sort_order = st.selectbox("Sort by", ["Newest First", "Oldest First"])
+            
+            # Apply filters
+            filtered_requests = all_requests
+            if status_filter != "All":
+                filtered_requests = {k: v for k, v in all_requests.items() if v.get('status') == status_filter.lower()}
+            
+            # Sort
+            sorted_filtered = sorted(
+                filtered_requests.items(),
+                key=lambda x: x[1].get('timestamp', ''),
+                reverse=(sort_order == "Newest First")
+            )
+            
+            st.markdown(f"**Showing {len(sorted_filtered)} requests**")
+            
+            # Display detailed information for each request
+            for req_id, data in sorted_filtered:
+                status_color = "🟢" if data.get('status') == 'completed' else "🟡"
+                year = data.get('year', 'N/A')
+                make = data.get('make', 'Unknown')
+                model = data.get('model', 'Unknown')
+                with st.expander(f"{status_color} {year} {make} {model} - ID: {req_id[:12]}..."):
+                    # Request metadata
+                    st.markdown("### Request Information")
+                    meta_col1, meta_col2 = st.columns(2)
+                    with meta_col1:
+                        st.write(f"**Request ID:** `{req_id}`")
+                        st.write(f"**Submitted:** {data.get('timestamp')}")
+                        status = data.get('status', 'unknown')
+                        st.write(f"**Status:** {status.upper()}")
+                    with meta_col2:
+                        if data.get('status') == 'completed':
+                            st.write(f"**Responded:** {data.get('response_timestamp')}")
+                        st.write(f"**Has Files:** {'Yes' if data.get('has_files') else 'No'}")
+                    
+                    # Vehicle Details
+                    st.markdown("### 🚗 Vehicle Details")
+                    veh_col1, veh_col2, veh_col3 = st.columns(3)
+                    with veh_col1:
+                        st.write(f"**Make:** {data.get('make', 'Unknown')}")
+                        st.write(f"**Model:** {data.get('model', 'Unknown')}")
+                        st.write(f"**Year:** {data.get('year', 'N/A')}")
+                    with veh_col2:
+                        st.write(f"**Mileage:** {data.get('mileage', 0)} km")
+                        st.write(f"**Engine:** {data.get('engine_type', 'Unknown')}")
+                        if data.get('vin'):
+                            st.write(f"**VIN:** {data.get('vin')}")
+                    with veh_col3:
+                        st.write(f"**Transmission:** {data.get('transmission_type', 'N/A')}")
+                        st.write(f"**Fuel Type:** {data.get('fuel_type', 'N/A')}")
+                        if data.get('last_service_date'):
+                            st.write(f"**Last Service:** {data['last_service_date']}")
+                    
+                    if data.get('obd_codes'):
+                        st.write(f"**OBD Codes:** {data['obd_codes']}")
+                    
+                    # Display Symptoms
+                    st.markdown("### 🔍 Reported Symptoms")
+                    symptoms = data.get('symptoms', {})
+                    
+                    if isinstance(symptoms, str):
+                        st.markdown(f"**Description:**\n>{symptoms}")
+                    else:
+                        # Power Symptoms
+                        power_symptoms = symptoms.get('power', {})
+                        active_power = [k.replace('_', ' ').title() for k, v in power_symptoms.items() if v]
+                        if active_power:
+                            st.markdown(f"**⚡ Power:** {', '.join(active_power)}")
+                        
+                        # Tactile Symptoms
+                        tactile_symptoms = symptoms.get('tactile', {})
+                        active_tactile = [k.replace('_', ' ').title() for k, v in tactile_symptoms.items() if v]
+                        if active_tactile:
+                            st.markdown(f"**👋 Tactile:** {', '.join(active_tactile)}")
+                        
+                        # Audible Symptoms
+                        audible_symptoms = symptoms.get('audible', {})
+                        active_audible = [k.replace('_', ' ').title() for k, v in audible_symptoms.items() if v]
+                        if active_audible:
+                            st.markdown(f"**🔊 Audible:** {', '.join(active_audible)}")
+                        
+                        # Fuel Symptoms
+                        fuel_symptoms = symptoms.get('fuel', {})
+                        active_fuel = [k.replace('_', ' ').title() for k, v in fuel_symptoms.items() if v]
+                        if active_fuel:
+                            st.markdown(f"**⛽ Fuel/Consumption:** {', '.join(active_fuel)}")
+                        
+                        # Visual Symptoms
+                        visual_symptoms = symptoms.get('visual', {})
+                        active_visual = [k.replace('_', ' ').title() for k, v in visual_symptoms.items() if v]
+                        if active_visual:
+                            st.markdown(f"**👁️ Visual:** {', '.join(active_visual)}")
+                        
+                        # Temperature Symptoms
+                        temp_symptoms = symptoms.get('temperature', {})
+                        active_temp = [k.replace('_', ' ').title() for k, v in temp_symptoms.items() if v]
+                        if active_temp:
+                            st.markdown(f"**🌡️ Temperature:** {', '.join(active_temp)}")
+                        
+                        # Additional Details
+                        additional = symptoms.get('additional_details', '')
+                        if additional:
+                            st.markdown(f"**📝 Additional Details:**\n>{additional}")
+                    
+                    # Expert Response (if completed)
+                    if data.get('status') == 'completed' and data.get('response'):
+                        st.markdown("### ✅ Expert Diagnosis")
+                        st.info(data.get('response'))
+                    
+                    st.markdown("---")
+        else:
+            st.info("No requests to display.")
