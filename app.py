@@ -61,32 +61,34 @@ with tab1:
     
     YEARS = ["Select Year"] + [str(year) for year in range(2025, 1979, -1)]
     
+    # Vehicle information is outside the form so that selecting a make
+    # triggers a re-run and the model dropdown updates dynamically.
+    st.subheader("📋 Vehicle Information")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        make = st.selectbox("Car Make", AUSTRALIAN_MAKES, index=0)
+
+        # Dynamic model dropdown based on selected make
+        if make in MODELS_BY_MAKE:
+            model_options = MODELS_BY_MAKE[make]
+        else:
+            model_options = ["Select Model", "Other"]
+        model = st.selectbox("Car Model", model_options, index=0)
+
+        year_str = st.selectbox("Year", YEARS, index=0)
+        year = int(year_str) if year_str != "Select Year" else 0
+
+    with col2:
+        mileage = st.number_input("Mileage (km/miles)", min_value=0, step=1000)
+        vin = st.text_input("VIN (Optional)", placeholder="17-digit VIN")
+        engine_type = st.selectbox("Engine Type", ["2", "3", "4", "5", "6", "8", "10", "11", "12", "Rotary"])
+
+    with col3:
+        transmission_type = st.selectbox("Transmission", ["Automatic", "Manual", "CVT", "Semi-Automatic", "Unknown"])
+        fuel_type = st.selectbox("Fuel Type", ["Petrol/Unleaded", "Diesel", "Hybrid", "Bio-Diesel", "Alcohol (E85/Methanol)"])
+        last_service_date = st.text_input("Last Service Date (Optional)", placeholder="YYYY-MM-DD or e.g., 3 months ago")
+
     with st.form("diagnostic_request_form"):
-        st.subheader("📋 Vehicle Information")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            make = st.selectbox("Car Make", AUSTRALIAN_MAKES, index=0)
-            
-            # Dynamic model dropdown based on selected make
-            if make in MODELS_BY_MAKE:
-                model_options = MODELS_BY_MAKE[make]
-            else:
-                model_options = ["Select Model", "Other"]
-            model = st.selectbox("Car Model", model_options, index=0)
-            
-            year_str = st.selectbox("Year", YEARS, index=0)
-            year = int(year_str) if year_str != "Select Year" else 0
-
-        with col2:
-            mileage = st.number_input("Mileage (km/miles)", min_value=0, step=1000)
-            vin = st.text_input("VIN (Optional)", placeholder="17-digit VIN")
-            engine_type = st.selectbox("Engine Type", ["Gasoline", "Diesel", "Hybrid", "Electric", "Other"])
-
-        with col3:
-            transmission_type = st.selectbox("Transmission", ["Automatic", "Manual", "CVT", "Semi-Automatic", "Unknown"])
-            fuel_type = st.selectbox("Fuel Type", ["Regular", "Premium", "Diesel", "Electric", "Hybrid", "Other"])
-            last_service_date = st.text_input("Last Service Date (Optional)", placeholder="YYYY-MM-DD or e.g., 3 months ago")
-
         st.markdown("---")
         st.subheader("🔍 Symptom Categories")
         st.markdown("**Select at least one option in each category:**")

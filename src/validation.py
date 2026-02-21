@@ -51,7 +51,7 @@ def validate_input(make, model, year, mileage, vin, engine_type, transmission_ty
              errors.append("VIN contains invalid characters (I, O, and Q are not allowed in standard VINs).")
 
     # Validate Engine Type
-    valid_engines = ["Gasoline", "Diesel", "Hybrid", "Electric", "Other"]
+    valid_engines = ["2", "3", "4", "5", "6", "8", "10", "11", "12", "Rotary"]
     if engine_type not in valid_engines:
         errors.append("Invalid Engine Type selected.")
 
@@ -61,7 +61,7 @@ def validate_input(make, model, year, mileage, vin, engine_type, transmission_ty
         errors.append("Invalid Transmission Type selected.")
 
     # Validate Fuel Type
-    valid_fuel_types = ["Regular", "Premium", "Diesel", "Electric", "Hybrid", "Other"]
+    valid_fuel_types = ["Petrol/Unleaded", "Diesel", "Hybrid", "Bio-Diesel", "Alcohol (E85/Methanol)"]
     if fuel_type not in valid_fuel_types:
         errors.append("Invalid Fuel Type selected.")
 
