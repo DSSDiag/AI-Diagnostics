@@ -123,7 +123,9 @@ with tab1:
     with col2:
         mileage = st.number_input("Mileage (km/miles)", min_value=0, step=1000)
         vin = st.text_input("VIN (Optional)", placeholder="17-digit VIN")
-        engine_type = st.selectbox("Engine Type", ["2", "3", "4", "5", "6", "8", "10", "11", "12", "Rotary"])
+        engine_type = st.selectbox("Engine Type (Cylinders)", ["2", "3", "4", "5", "6", "8", "10", "11", "12", "Rotary"])
+        engine_capacity = st.text_input("Engine Capacity:", placeholder="e.g., 2.0L, 3500cc")
+        engine_code = st.text_input("Engine Code (If known)", placeholder="e.g., 2GR-FE, EJ257")
 
     with col3:
         transmission_type = st.selectbox("Transmission", ["Automatic", "Manual", "CVT", "Semi-Automatic", "Unknown"])
@@ -441,6 +443,10 @@ with tab2:
                             st.write(f"**Mileage:** {data['mileage']}")
                         with col2:
                             st.write(f"**Engine:** {data['engine_type']}")
+                            if data.get('engine_capacity'):
+                                st.write(f"**Engine Capacity:** {data['engine_capacity']}")
+                            if data.get('engine_code'):
+                                st.write(f"**Engine Code:** {data['engine_code']}")
                             st.write(f"**Transmission:** {data.get('transmission_type', 'N/A')}")
                             st.write(f"**Fuel Type:** {data.get('fuel_type', 'N/A')}")
                         if data.get('last_service_date'):
@@ -531,6 +537,10 @@ with tab3:
                     st.write(f"**Vehicle:** {req_data.get('year')} {req_data.get('make')} {req_data.get('model')}")
                     st.write(f"**Mileage:** {req_data.get('mileage')}")
                     st.write(f"**Engine:** {req_data.get('engine_type')}")
+                    if req_data.get('engine_capacity'):
+                        st.write(f"**Engine Capacity:** {req_data.get('engine_capacity')}")
+                    if req_data.get('engine_code'):
+                        st.write(f"**Engine Code:** {req_data.get('engine_code')}")
                 with col2:
                     if req_data.get('transmission_type'):
                         st.write(f"**Transmission:** {req_data.get('transmission_type')}")
@@ -709,6 +719,10 @@ with tab4:
                     with veh_col2:
                         st.write(f"**Mileage:** {data.get('mileage', 0)} km")
                         st.write(f"**Engine:** {data.get('engine_type', 'Unknown')}")
+                        if data.get('engine_capacity'):
+                            st.write(f"**Engine Capacity:** {data.get('engine_capacity')}")
+                        if data.get('engine_code'):
+                            st.write(f"**Engine Code:** {data.get('engine_code')}")
                         if data.get('vin'):
                             st.write(f"**VIN:** {data.get('vin')}")
                     with veh_col3:
