@@ -492,3 +492,87 @@ def test_validate_input_hunting_symptom():
     assert errors == []
 
 
+def test_validate_input_other_text_valid():
+    """Test that valid 'other' text in symptom categories passes validation"""
+    symptoms_data = {
+        "power": {"loss_of_power": True, "other": ""},
+        "tactile": {"no_change": True, "other": "Unusual steering wheel wobble"},
+        "audible": {"no_change": True, "other": ""},
+        "fuel": {"no_change": True, "other": ""},
+        "visual": {"no_change": True, "other": ""},
+        "temperature": {"no_change": True, "other": ""},
+        "additional_details": ""
+    }
+
+    errors = validate_input(
+        make="Toyota", model="Camry", year=2015, mileage=50000, vin="",
+        engine_type="4", transmission_type="Automatic", fuel_type="Petrol/Unleaded",
+        last_service_date="", symptoms=symptoms_data, obd_codes=""
+    )
+    assert errors == []
+
+
+def test_validate_input_other_text_too_long():
+    """Test that excessively long 'other' text is rejected for each category"""
+    long_text = "a" * 501
+    categories_under_test = ["power", "tactile", "audible", "fuel", "visual", "temperature"]
+    for cat in categories_under_test:
+        symptoms_data = {
+            "power": {"no_change": True},
+            "tactile": {"no_change": True},
+            "audible": {"no_change": True},
+            "fuel": {"no_change": True},
+            "visual": {"no_change": True},
+            "temperature": {"no_change": True},
+            "additional_details": ""
+        }
+        symptoms_data[cat] = {"no_change": True, "other": long_text}
+
+        errors = validate_input(
+            make="Toyota", model="Camry", year=2015, mileage=50000, vin="",
+            engine_type="4", transmission_type="Automatic", fuel_type="Petrol/Unleaded",
+            last_service_date="", symptoms=symptoms_data, obd_codes=""
+        )
+        assert f"{cat.title()} 'Other' description must be less than 500 characters." in errors, \
+            f"Expected length error for category '{cat}'"
+
+
+def test_validate_input_other_text_xss():
+    """Test that XSS in 'other' text is rejected"""
+    symptoms_data = {
+        "power": {"no_change": True},
+        "tactile": {"no_change": True, "other": "<script>alert('xss')</script>"},
+        "audible": {"no_change": True},
+        "fuel": {"no_change": True},
+        "visual": {"no_change": True},
+        "temperature": {"no_change": True},
+        "additional_details": ""
+    }
+
+    errors = validate_input(
+        make="Toyota", model="Camry", year=2015, mileage=50000, vin="",
+        engine_type="4", transmission_type="Automatic", fuel_type="Petrol/Unleaded",
+        last_service_date="", symptoms=symptoms_data, obd_codes=""
+    )
+    assert "Invalid characters detected in Tactile 'Other' description." in errors
+
+
+def test_validate_input_other_text_counts_as_selection():
+    """Test that non-empty 'other' text counts as a valid symptom selection"""
+    symptoms_data = {
+        "power": {"other": "Engine cuts out at high RPM"},
+        "tactile": {"no_change": True},
+        "audible": {"no_change": True},
+        "fuel": {"no_change": True},
+        "visual": {"no_change": True},
+        "temperature": {"no_change": True},
+        "additional_details": ""
+    }
+
+    errors = validate_input(
+        make="Toyota", model="Camry", year=2015, mileage=50000, vin="",
+        engine_type="4", transmission_type="Automatic", fuel_type="Petrol/Unleaded",
+        last_service_date="", symptoms=symptoms_data, obd_codes=""
+    )
+    # "other" text is truthy so the power category has a selection and a non-no_change item
+    assert errors == []
