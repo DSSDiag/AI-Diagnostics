@@ -382,8 +382,6 @@ with tab1:
                     "mileage": mileage,
                     "vin": vin,
                     "engine_type": engine_type,
-                    "engine_capacity": engine_capacity,
-                    "engine_code": engine_code,
                     "transmission_type": transmission_type,
                     "fuel_type": fuel_type,
                     "last_service_date": last_service_date,
