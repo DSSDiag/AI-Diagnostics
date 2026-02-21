@@ -98,6 +98,14 @@ def validate_input(make, model, year, mileage, vin, engine_type, transmission_ty
                 
                 if has_non_no_change:
                     all_categories_no_change = False
+
+                # Validate 'other' text if provided
+                other_text = category_symptoms.get('other', '')
+                if other_text:
+                    if len(other_text) > 500:
+                        errors.append(f"{category.title()} 'Other' description must be less than 500 characters.")
+                    elif re.search(r"<script.*?>", other_text, re.IGNORECASE | re.DOTALL):
+                        errors.append(f"Invalid characters detected in {category.title()} 'Other' description.")
         
         # Error if any category has no selection
         if categories_missing_selection:
