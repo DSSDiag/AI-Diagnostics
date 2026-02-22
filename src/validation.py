@@ -1,4 +1,84 @@
 import re
+from datetime import date, datetime
+
+def validate_signup(name, email, password, dob, occupation):
+    """
+    Validates new member signup fields.
+
+    Args:
+        name (str): Full name.
+        email (str): Email address (used as username).
+        password (str): Chosen password.
+        dob: Date of birth (date object or 'YYYY-MM-DD' string).
+        occupation (str): Occupation.
+
+    Returns:
+        list: Error messages. Empty list means valid.
+    """
+    errors = []
+
+    # Name
+    name_str = name.strip() if name else ""
+    if not name_str:
+        errors.append("Full name is required.")
+    elif len(name_str) < 2:
+        errors.append("Name must be at least 2 characters.")
+    elif len(name_str) > 100:
+        errors.append("Name must be less than 100 characters.")
+    elif re.search(r"<[^>]+>", name_str, re.IGNORECASE | re.DOTALL):
+        errors.append("Invalid characters detected in name.")
+
+    # Email
+    email_str = email.strip() if email else ""
+    if not email_str:
+        errors.append("Email address is required.")
+    elif len(email_str) > 254:
+        errors.append("Email address is too long.")
+    elif not re.match(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$', email_str):
+        errors.append("Please enter a valid email address.")
+
+    # Password
+    if not password:
+        errors.append("Password is required.")
+    elif len(password) < 8:
+        errors.append("Password must be at least 8 characters long.")
+    elif not re.search(r'[A-Za-z]', password):
+        errors.append("Password must contain at least one letter.")
+    elif not re.search(r'\d', password):
+        errors.append("Password must contain at least one number.")
+
+    # Date of Birth
+    if dob is None or dob == "":
+        errors.append("Date of birth is required.")
+    else:
+        try:
+            if isinstance(dob, str):
+                dob_date = datetime.strptime(dob, "%Y-%m-%d").date()
+            else:
+                dob_date = dob
+            today = date.today()
+            # Use exact year-based calculation to handle leap years correctly
+            age = (
+                today.year - dob_date.year
+                - ((today.month, today.day) < (dob_date.month, dob_date.day))
+            )
+            if age < 16:
+                errors.append("You must be at least 16 years old to register.")
+            elif age > 120:
+                errors.append("Please enter a valid date of birth.")
+        except (ValueError, TypeError):
+            errors.append("Please enter a valid date of birth.")
+
+    # Occupation
+    occupation_str = occupation.strip() if occupation else ""
+    if not occupation_str:
+        errors.append("Occupation is required.")
+    elif len(occupation_str) > 100:
+        errors.append("Occupation must be less than 100 characters.")
+    elif re.search(r"<[^>]+>", occupation_str, re.IGNORECASE | re.DOTALL):
+        errors.append("Invalid characters detected in occupation.")
+
+    return errors
 
 def validate_input(make, model, year, mileage, vin, engine_type, transmission_type, 
                    fuel_type, last_service_date, symptoms, obd_codes):

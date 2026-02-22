@@ -1,6 +1,10 @@
 import streamlit as st
-from src.storage import create_request, get_request, get_all_requests, update_request_response
-from src.validation import validate_input
+from src.storage import (
+    create_request, get_request, get_all_requests, update_request_response,
+    update_request_files, create_user, get_user, get_all_users, verify_user,
+    update_user_status, delete_user, get_user_requests,
+)
+from src.validation import validate_input, validate_signup
 
 
 def _fmt_symptoms(d):
@@ -13,35 +17,599 @@ def _fmt_symptoms(d):
         for k, v in d.items() if v
     ]
 
+
 st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_icon="🚗")
 
-st.title("🚗 Automotive Fault Diagnostics")
-
-# Mock User Login for Expert and Admin
-# In a real app, this would use a secure authentication system.
+# Mock passwords for expert and admin roles
 EXPERT_PASSWORD = "password123"
 ADMIN_PASSWORD = "admin456"
 
-# Tabs for different user roles
-tab1, tab2, tab3, tab4 = st.tabs(["Car Owner (Submit Issue)", "Expert Dashboard (For Mechanics)", "Check Diagnosis Status", "Admin Area"])
+# ---------------------------------------------------------------------------
+# Global CSS – automotive diagnostics database / workshop desk theme
+# ---------------------------------------------------------------------------
+st.markdown("""
+<style>
+/* ── Base ──────────────────────────────────────────────────────────────── */
+.stApp {
+    background: linear-gradient(160deg, #0c0c0e 0%, #111318 60%, #0c0c0e 100%);
+    color: #c8c8c8;
+}
+.block-container { padding-top: 1.5rem; }
 
-# --- TAB 1: CAR OWNER ---
+/* ── Typography ─────────────────────────────────────────────────────────── */
+h1, h2, h3, h4 {
+    font-family: 'Courier New', Courier, monospace !important;
+    letter-spacing: 2px;
+    color: #e8820c !important;
+}
+p, label, span, div { font-family: 'Courier New', Courier, monospace; }
+
+/* ── Streamlit tabs ─────────────────────────────────────────────────────── */
+.stTabs [data-baseweb="tab-list"] {
+    background: #111318;
+    border-bottom: 2px solid #e8820c;
+    gap: 2px;
+}
+.stTabs [data-baseweb="tab"] {
+    color: #888;
+    font-family: 'Courier New', Courier, monospace;
+    letter-spacing: 1px;
+    font-size: 0.85rem;
+    background: #1a1a22;
+    border: 1px solid #2a2a35;
+    border-bottom: none;
+    padding: 8px 20px;
+}
+.stTabs [aria-selected="true"] {
+    background: #1f1a0e !important;
+    color: #e8820c !important;
+    border-color: #e8820c !important;
+}
+
+/* ── Inputs ─────────────────────────────────────────────────────────────── */
+input, textarea, select {
+    background: #111318 !important;
+    color: #c8c8c8 !important;
+    border: 1px solid #333 !important;
+    font-family: 'Courier New', Courier, monospace !important;
+}
+input:focus, textarea:focus {
+    border-color: #e8820c !important;
+    box-shadow: 0 0 4px rgba(232,130,12,0.4) !important;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.stButton > button {
+    background: #1a1a22;
+    color: #e8820c;
+    border: 1px solid #e8820c;
+    font-family: 'Courier New', Courier, monospace;
+    letter-spacing: 1px;
+    transition: background 0.2s;
+}
+.stButton > button:hover {
+    background: #e8820c;
+    color: #000;
+}
+
+/* ── Alerts ──────────────────────────────────────────────────────────────── */
+.stAlert { border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+
+/* ── Login / Signup card ─────────────────────────────────────────────────── */
+.auth-card {
+    border: 2px solid #e8820c;
+    border-radius: 6px;
+    padding: 32px 36px;
+    background: rgba(232,130,12,0.04);
+    max-width: 520px;
+    margin: 0 auto;
+}
+.auth-header {
+    text-align: center;
+    border-bottom: 1px solid #e8820c;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+}
+.auth-header .title-lg {
+    font-size: 1.5rem;
+    color: #e8820c;
+    font-family: 'Courier New', Courier, monospace;
+    letter-spacing: 4px;
+    font-weight: bold;
+}
+.auth-header .subtitle {
+    font-size: 0.75rem;
+    color: #888;
+    letter-spacing: 2px;
+    margin-top: 4px;
+}
+.desk-scene {
+    text-align: center;
+    font-size: 2.4rem;
+    line-height: 1;
+    margin: 18px 0 10px 0;
+    letter-spacing: 6px;
+    filter: drop-shadow(0 0 6px rgba(232,130,12,0.5));
+}
+.obd-readout {
+    border: 1px solid #333;
+    background: #0a0a0f;
+    padding: 10px 14px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    color: #00c851;
+    font-family: 'Courier New', Courier, monospace;
+    margin: 12px 0;
+    white-space: pre;
+    overflow-x: auto;
+}
+.rudeness-warning {
+    background: rgba(200,30,30,0.08);
+    border: 1px solid #8b1a1a;
+    border-left: 4px solid #c0392b;
+    padding: 10px 14px;
+    border-radius: 3px;
+    color: #e07070;
+    font-size: 0.78rem;
+    font-family: 'Courier New', Courier, monospace;
+    margin: 14px 0;
+}
+
+/* ── Fixed bottom-right admin button ────────────────────────────────────── */
+.admin-access-fixed {
+    position: fixed;
+    bottom: 18px;
+    right: 20px;
+    z-index: 9999;
+}
+.admin-access-fixed a {
+    background: rgba(10,10,20,0.85);
+    border: 1px solid #3a3a4a;
+    color: #555;
+    padding: 5px 11px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: 'Courier New', Courier, monospace;
+    text-decoration: none;
+    letter-spacing: 1px;
+}
+.admin-access-fixed a:hover {
+    border-color: #e8820c;
+    color: #e8820c;
+}
+
+/* ── Expander ────────────────────────────────────────────────────────────── */
+.streamlit-expanderHeader {
+    font-family: 'Courier New', Courier, monospace !important;
+    background: #111318 !important;
+    color: #c8c8c8 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------------------------------------------------------------------
+# Fixed admin button – always visible at bottom-right corner of every page.
+# Clicking navigates to ?page=admin which renders the admin panel below.
+# ---------------------------------------------------------------------------
+st.markdown("""
+<div class="admin-access-fixed">
+    <a href="?page=admin">🔐 ADMIN</a>
+</div>
+""", unsafe_allow_html=True)
+
+# ---------------------------------------------------------------------------
+# Page routing via query params
+# ---------------------------------------------------------------------------
+current_page = st.query_params.get("page", "main")
+
+
+# ===========================================================================
+# ADMIN PANEL  (accessed via the bottom-right 🔐 ADMIN button → ?page=admin)
+# ===========================================================================
+if current_page == "admin":
+    st.markdown("""
+    <div style="text-align:center; border-bottom: 2px solid #e8820c;
+                padding-bottom:12px; margin-bottom:20px;">
+        <span style="font-family:'Courier New',monospace; font-size:1.6rem;
+                     color:#e8820c; letter-spacing:6px; font-weight:bold;">
+            🔐 ADMIN CONTROL PANEL
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.button("← Back to Main"):
+        st.query_params.clear()
+        st.rerun()
+
+    if 'admin_logged_in' not in st.session_state:
+        st.session_state['admin_logged_in'] = False
+
+    if not st.session_state['admin_logged_in']:
+        st.markdown("#### Administrator Login")
+        adm_pw = st.text_input("Admin Password", type="password", key="admin_pw_input")
+        if st.button("Login as Admin"):
+            if adm_pw == ADMIN_PASSWORD:
+                st.session_state['admin_logged_in'] = True
+                st.rerun()
+            else:
+                st.error("Incorrect admin password.")
+    else:
+        st.success("Logged in as Administrator")
+        if st.button("Logout Admin", key="admin_logout"):
+            st.session_state['admin_logged_in'] = False
+            st.rerun()
+
+        st.markdown("---")
+
+        # ── Stats ──────────────────────────────────────────────────────────
+        all_requests = get_all_requests()
+        all_users = get_all_users()
+
+        total_req = len(all_requests)
+        pending_cnt = sum(1 for r in all_requests.values() if r.get('status') == 'pending')
+        completed_cnt = sum(1 for r in all_requests.values() if r.get('status') == 'completed')
+        total_users = len(all_users)
+        active_users = sum(1 for u in all_users.values() if u.get('status') == 'active')
+        paused_users = sum(1 for u in all_users.values() if u.get('status') == 'paused')
+
+        st.subheader("📊 Key Metrics")
+        m1, m2, m3, m4, m5, m6 = st.columns(6)
+        m1.metric("Total Requests", total_req)
+        m2.metric("Pending", pending_cnt)
+        m3.metric("Completed", completed_cnt)
+        m4.metric("Total Members", total_users)
+        m5.metric("Active", active_users)
+        m6.metric("Paused", paused_users)
+
+        st.markdown("---")
+
+        # ── Member management ──────────────────────────────────────────────
+        st.subheader("👥 Member Management")
+        if all_users:
+            for email, user in all_users.items():
+                status_icon = "🟢" if user.get('status') == 'active' else "🔴"
+                with st.expander(
+                    f"{status_icon} {user.get('name', 'Unknown')}  —  {email}"
+                ):
+                    uc1, uc2 = st.columns(2)
+                    with uc1:
+                        st.write(f"**Name:** {user.get('name')}")
+                        st.write(f"**Email:** {email}")
+                        st.write(f"**Date of Birth:** {user.get('dob', 'N/A')}")
+                    with uc2:
+                        st.write(f"**Occupation:** {user.get('occupation', 'N/A')}")
+                        st.write(f"**Status:** {user.get('status', 'N/A').upper()}")
+                        st.write(f"**Registered:** {user.get('created_at', 'N/A')}")
+
+                    # Request history for this user
+                    user_reqs = get_user_requests(email)
+                    st.markdown(f"**Diagnostic Requests:** {len(user_reqs)}")
+                    if user_reqs:
+                        for rid, rdata in sorted(
+                            user_reqs.items(),
+                            key=lambda x: x[1].get('timestamp', ''),
+                            reverse=True,
+                        ):
+                            rstatus = rdata.get('status', 'unknown')
+                            ricon = "✅" if rstatus == 'completed' else "⏳"
+                            st.markdown(
+                                f"&nbsp;&nbsp;{ricon} `{rid[:8]}…` — "
+                                f"{rdata.get('year', '')} {rdata.get('make', '')} "
+                                f"{rdata.get('model', '')} — "
+                                f"{rdata.get('timestamp', '')} — **{rstatus.upper()}**"
+                            )
+
+                    # Account actions
+                    st.markdown("**Account Actions:**")
+                    act_col1, act_col2 = st.columns(2)
+                    with act_col1:
+                        if user.get('status') == 'active':
+                            if st.button("⏸ Pause Account", key=f"pause_{email}"):
+                                update_user_status(email, 'paused')
+                                st.success(f"Account paused for {email}.")
+                                st.rerun()
+                        else:
+                            if st.button("▶ Reactivate Account", key=f"activate_{email}"):
+                                update_user_status(email, 'active')
+                                st.success(f"Account reactivated for {email}.")
+                                st.rerun()
+                    with act_col2:
+                        if st.button(
+                            "🗑 Delete Account", key=f"delete_{email}",
+                            help="This permanently removes the account.",
+                        ):
+                            delete_user(email)
+                            st.warning(f"Account deleted for {email}.")
+                            st.rerun()
+        else:
+            st.info("No registered members yet.")
+
+        st.markdown("---")
+
+        # ── Recent Activity ────────────────────────────────────────────────
+        st.subheader("📈 Recent Activity")
+        if all_requests:
+            sorted_requests = sorted(
+                all_requests.items(),
+                key=lambda x: x[1].get('timestamp', ''),
+                reverse=True,
+            )
+            st.markdown("**Latest 10 Requests:**")
+            for req_id, data in sorted_requests[:10]:
+                sicon = "✅" if data.get('status') == 'completed' else "⏳"
+                st.markdown(
+                    f"{sicon} **{data.get('year', 'N/A')} {data.get('make', '?')} "
+                    f"{data.get('model', '?')}** — {data.get('timestamp')} — "
+                    f"Status: {data.get('status', '').upper()} — "
+                    f"Member: {data.get('user_email', 'N/A')}"
+                )
+        else:
+            st.info("No activity yet.")
+
+        st.markdown("---")
+
+        # ── All Requests ───────────────────────────────────────────────────
+        st.subheader("🗂️ All Requests")
+        if all_requests:
+            filter_col1, filter_col2 = st.columns(2)
+            with filter_col1:
+                status_filter = st.selectbox(
+                    "Filter by Status", ["All", "Pending", "Completed"]
+                )
+            with filter_col2:
+                sort_order = st.selectbox("Sort by", ["Newest First", "Oldest First"])
+
+            filtered = all_requests
+            if status_filter != "All":
+                filtered = {
+                    k: v for k, v in all_requests.items()
+                    if v.get('status') == status_filter.lower()
+                }
+            sorted_filtered = sorted(
+                filtered.items(),
+                key=lambda x: x[1].get('timestamp', ''),
+                reverse=(sort_order == "Newest First"),
+            )
+
+            st.markdown(f"**Showing {len(sorted_filtered)} requests**")
+            for req_id, data in sorted_filtered:
+                sc = "🟢" if data.get('status') == 'completed' else "🟡"
+                with st.expander(
+                    f"{sc} {data.get('year', 'N/A')} {data.get('make', '?')} "
+                    f"{data.get('model', '?')} — ID: {req_id[:12]}…"
+                ):
+                    st.write(f"**Request ID:** `{req_id}`")
+                    st.write(f"**Member:** {data.get('user_email', 'N/A')}")
+                    st.write(f"**Submitted:** {data.get('timestamp')}")
+                    st.write(f"**Status:** {data.get('status', '').upper()}")
+                    if data.get('status') == 'completed':
+                        st.write(f"**Responded:** {data.get('response_timestamp')}")
+
+                    st.markdown("**Vehicle:**")
+                    vc1, vc2, vc3 = st.columns(3)
+                    with vc1:
+                        st.write(f"Make: {data.get('make')}")
+                        st.write(f"Model: {data.get('model')}")
+                        st.write(f"Year: {data.get('year')}")
+                    with vc2:
+                        st.write(f"Mileage: {data.get('mileage', 0)} km")
+                        st.write(f"Engine: {data.get('engine_type')}")
+                        if data.get('engine_capacity'):
+                            st.write(f"Capacity: {data.get('engine_capacity')}")
+                        if data.get('engine_code'):
+                            st.write(f"Code: {data.get('engine_code')}")
+                        if data.get('vin'):
+                            st.write(f"VIN: {data.get('vin')}")
+                    with vc3:
+                        st.write(f"Transmission: {data.get('transmission_type')}")
+                        st.write(f"Fuel: {data.get('fuel_type')}")
+                        if data.get('last_service_date'):
+                            st.write(f"Last Service: {data['last_service_date']}")
+                    if data.get('obd_codes'):
+                        st.write(f"**OBD Codes:** {data['obd_codes']}")
+
+                    symptoms = data.get('symptoms', {})
+                    if isinstance(symptoms, str):
+                        st.markdown(f"**Symptoms:** {symptoms}")
+                    else:
+                        for cat, icon in [
+                            ('power', '⚡'), ('tactile', '👋'), ('audible', '🔊'),
+                            ('fuel', '⛽'), ('visual', '👁️'), ('temperature', '🌡️'),
+                        ]:
+                            active = _fmt_symptoms(symptoms.get(cat, {}))
+                            if active:
+                                st.markdown(f"**{icon} {cat.title()}:** {', '.join(active)}")
+                        if symptoms.get('additional_details'):
+                            st.markdown(f"**📝 Notes:** {symptoms['additional_details']}")
+
+                    if data.get('status') == 'completed' and data.get('response'):
+                        st.markdown("**✅ Expert Diagnosis:**")
+                        st.info(data['response'])
+        else:
+            st.info("No requests to display.")
+
+    # Stop rendering the rest of the page when in admin panel
+    st.stop()
+
+
+# ===========================================================================
+# MAIN APP  (member login / signup then main tabs)
+# ===========================================================================
+
+st.title("🚗 Automotive Fault Diagnostics")
+
+# ── Auth state ─────────────────────────────────────────────────────────────
+if 'logged_in_user' not in st.session_state:
+    st.session_state['logged_in_user'] = None
+
+# ===========================================================================
+# LOGIN / SIGNUP  (shown when not authenticated)
+# ===========================================================================
+if st.session_state['logged_in_user'] is None:
+
+    # Desk scene + branding
+    st.markdown("""
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="title-lg">DSS DIAGNOSTICS</div>
+            <div class="subtitle">AUTOMOTIVE FAULT DATABASE SYSTEM v2.0</div>
+        </div>
+        <div class="desk-scene">☕ 📚 🔧 🔌 📋</div>
+        <div class="obd-readout">SYSTEM READY...
+SCAN TOOL CONNECTED
+OBD-II INTERFACE: ACTIVE
+DATABASE: ONLINE  |  EXPERTS: AVAILABLE
+&gt; MEMBER LOGIN REQUIRED TO PROCEED_</div>
+        <div class="rudeness-warning">
+            ⚠️ <strong>COMMUNITY STANDARDS WARNING</strong><br>
+            Our experts are qualified professionals who volunteer their time.
+            Any abusive, rude, or disrespectful behaviour toward experts
+            <strong>will result in immediate account suspension.</strong>
+            By creating an account you agree to treat all experts with respect.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Login / Signup toggle
+    col_l, col_s = st.columns(2)
+    with col_l:
+        show_login = st.button("🔓 Member Login", use_container_width=True)
+    with col_s:
+        show_signup = st.button("📝 Create Account", use_container_width=True)
+
+    if 'auth_mode' not in st.session_state:
+        st.session_state['auth_mode'] = 'login'
+    if show_login:
+        st.session_state['auth_mode'] = 'login'
+    if show_signup:
+        st.session_state['auth_mode'] = 'signup'
+
+    st.markdown("---")
+
+    # ── LOGIN ──────────────────────────────────────────────────────────────
+    if st.session_state['auth_mode'] == 'login':
+        st.subheader("🔓 Member Login")
+        st.markdown(
+            "<div class='rudeness-warning'>⚠️ Reminder: Respectful communication "
+            "with our experts is mandatory. Rude behaviour = account suspension.</div>",
+            unsafe_allow_html=True,
+        )
+        with st.form("login_form"):
+            login_email = st.text_input(
+                "Email Address (your username)", placeholder="you@example.com"
+            )
+            login_pw = st.text_input("Password", type="password")
+            login_btn = st.form_submit_button("Login →")
+
+        if login_btn:
+            if not login_email or not login_pw:
+                st.error("Please enter your email and password.")
+            else:
+                ok, msg = verify_user(login_email.strip(), login_pw)
+                if ok:
+                    user = get_user(login_email.strip())
+                    st.session_state['logged_in_user'] = user
+                    st.success(f"Welcome back, {user['name']}!")
+                    st.rerun()
+                else:
+                    st.error(msg)
+
+    # ── SIGNUP ─────────────────────────────────────────────────────────────
+    else:
+        st.subheader("📝 Create New Account")
+        st.markdown(
+            "<div class='rudeness-warning'>⚠️ <strong>Please read before signing up:</strong> "
+            "Our experts are professionals. Any abusive or rude behaviour will result in "
+            "<strong>immediate account suspension</strong>. By registering you agree to "
+            "treat every expert with courtesy and respect at all times.</div>",
+            unsafe_allow_html=True,
+        )
+        with st.form("signup_form"):
+            su_name = st.text_input("Full Name *", placeholder="Jane Smith")
+            su_email = st.text_input(
+                "Email Address * (used as your login username)",
+                placeholder="jane@example.com",
+            )
+            su_pw = st.text_input(
+                "Password * (min 8 chars, must include a letter & number)",
+                type="password",
+            )
+            su_pw2 = st.text_input("Confirm Password *", type="password")
+            su_dob = st.date_input("Date of Birth *", value=None)
+            su_occ = st.text_input(
+                "Occupation *", placeholder="e.g. Fleet Manager, Car Enthusiast"
+            )
+            signup_btn = st.form_submit_button("Create Account →")
+
+        if signup_btn:
+            if su_pw != su_pw2:
+                st.error("Passwords do not match.")
+            else:
+                errs = validate_signup(su_name, su_email, su_pw, su_dob, su_occ)
+                if errs:
+                    for e in errs:
+                        st.error(e)
+                else:
+                    ok, msg = create_user(su_email, su_pw, su_name, su_dob, su_occ)
+                    if ok:
+                        st.success("✅ Account created! You can now log in.")
+                        st.session_state['auth_mode'] = 'login'
+                        st.rerun()
+                    else:
+                        st.error(msg)
+
+    # Don't render the main app tabs while not logged in
+    st.stop()
+
+
+# ===========================================================================
+# AUTHENTICATED – Main application tabs
+# ===========================================================================
+
+current_user = st.session_state['logged_in_user']
+
+# Top bar: user info + logout
+top_col1, top_col2 = st.columns([6, 1])
+with top_col1:
+    st.markdown(
+        f"<span style='font-family:monospace; color:#e8820c;'>"
+        f"👤 Logged in as: <strong>{current_user['name']}</strong> "
+        f"({current_user['email']})</span>",
+        unsafe_allow_html=True,
+    )
+with top_col2:
+    if st.button("Logout"):
+        st.session_state['logged_in_user'] = None
+        st.rerun()
+
+st.markdown("---")
+
+tab1, tab2, tab3 = st.tabs([
+    "🚗 Submit Issue",
+    "🔧 Expert Dashboard",
+    "🔍 Check Status",
+])
+
+# ---------------------------------------------------------------------------
+# TAB 1: CAR OWNER – Submit Issue
+# ---------------------------------------------------------------------------
 with tab1:
     st.header("Describe Your Car Issue")
     st.markdown("Get professional diagnostic advice from certified experts.")
 
     # Australian Market Vehicle Data
     AUSTRALIAN_MAKES = [
-        "Select Make", "Abarth", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "BYD", "Chery", 
-        "Chevrolet", "Chrysler", "Citroen", "Cupra", "Dacia", "Daewoo", "Daihatsu", "Dodge", "Ferrari", 
-        "Fiat", "Ford", "Genesis", "GWM", "Holden", "Honda", "Hyundai", "Infiniti", "Isuzu", "Jaguar", 
-        "Jeep", "Kia", "Lamborghini", "Land Rover", "LDV", "Lexus", "Mahindra", "Maserati", "Mazda", 
-        "McLaren", "Mercedes-Benz", "MG", "Mini", "Mitsubishi", "Nissan", "Opel", "Peugeot", "Porsche", 
-        "RAM", "Renault", "Rolls-Royce", "Skoda", "SsangYong", "Subaru", "Suzuki", "Tesla", "Toyota", 
-        "Volkswagen", "Volvo", "Other"
+        "Select Make", "Abarth", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "BYD", "Chery",
+        "Chevrolet", "Chrysler", "Citroen", "Cupra", "Dacia", "Daewoo", "Daihatsu", "Dodge", "Ferrari",
+        "Fiat", "Ford", "Genesis", "GWM", "Holden", "Honda", "Hyundai", "Infiniti", "Isuzu", "Jaguar",
+        "Jeep", "Kia", "Lamborghini", "Land Rover", "LDV", "Lexus", "Mahindra", "Maserati", "Mazda",
+        "McLaren", "Mercedes-Benz", "MG", "Mini", "Mitsubishi", "Nissan", "Opel", "Peugeot", "Porsche",
+        "RAM", "Renault", "Rolls-Royce", "Skoda", "SsangYong", "Subaru", "Suzuki", "Tesla", "Toyota",
+        "Volkswagen", "Volvo", "Other",
     ]
-    
-    # Popular models by make
+
     MODELS_BY_MAKE = {
         "Abarth": ["Select Model", "500", "595", "695", "124 Spider", "Punto", "Other"],
         "Alfa Romeo": ["Select Model", "147", "156", "159", "Brera", "Giulia", "Giulietta", "GTV", "MiTo", "Spider", "Stelvio", "Tonale", "Other"],
@@ -100,23 +668,18 @@ with tab1:
         "Volkswagen": ["Select Model", "Amarok", "Arteon", "Caddy", "Caravelle", "Crafter", "Golf", "ID.3", "ID.4", "ID.5", "Multivan", "Passat", "Polo", "T-Cross", "T-Roc", "Tiguan", "Tiguan Allspace", "Touareg", "Touran", "Transporter", "Other"],
         "Volvo": ["Select Model", "C30", "C40", "C70", "EX30", "EX40", "EX90", "S40", "S60", "S80", "S90", "V40", "V60", "V90", "XC40", "XC60", "XC70", "XC90", "Other"],
     }
-    
+
     YEARS = ["Select Year"] + [str(year) for year in range(2025, 1979, -1)]
-    
-    # Vehicle information is outside the form so that selecting a make
-    # triggers a re-run and the model dropdown updates dynamically.
+
     st.subheader("📋 Vehicle Information")
     col1, col2, col3 = st.columns(3)
     with col1:
         make = st.selectbox("Car Make", AUSTRALIAN_MAKES, index=0)
-
-        # Dynamic model dropdown based on selected make
         if make in MODELS_BY_MAKE:
             model_options = MODELS_BY_MAKE[make]
         else:
             model_options = ["Select Model", "Other"]
         model = st.selectbox("Car Model", model_options, index=0)
-
         year_str = st.selectbox("Year", YEARS, index=0)
         year = int(year_str) if year_str != "Select Year" else 0
 
@@ -152,7 +715,7 @@ with tab1:
     if power_other:
         power_other_text = st.text_input(
             "Describe other power symptoms", key="power_other_text",
-            placeholder="Enter any other power symptoms not listed above..."
+            placeholder="Enter any other power symptoms not listed above...",
         )
     else:
         power_other_text = ""
@@ -175,7 +738,7 @@ with tab1:
     if tactile_other:
         tactile_other_text = st.text_input(
             "Describe other tactile symptoms", key="tactile_other_text",
-            placeholder="Enter any other tactile/physical symptoms not listed above..."
+            placeholder="Enter any other tactile/physical symptoms not listed above...",
         )
     else:
         tactile_other_text = ""
@@ -197,12 +760,12 @@ with tab1:
     if audible_other:
         audible_other_text = st.text_input(
             "Describe other audible symptoms", key="audible_other_text",
-            placeholder="Enter any other sounds or noises not listed above..."
+            placeholder="Enter any other sounds or noises not listed above...",
         )
     else:
         audible_other_text = ""
 
-    # Fuel Consumption Symptoms
+    # Fuel Symptoms
     st.markdown("**⛽ Fuel/Consumption Symptoms**")
     col_f1, col_f2, col_f3 = st.columns(3)
     with col_f1:
@@ -219,7 +782,7 @@ with tab1:
     if fuel_other:
         fuel_other_text = st.text_input(
             "Describe other fuel/consumption symptoms", key="fuel_other_text",
-            placeholder="Enter any other fuel or consumption issues not listed above..."
+            placeholder="Enter any other fuel or consumption issues not listed above...",
         )
     else:
         fuel_other_text = ""
@@ -241,7 +804,7 @@ with tab1:
     if visual_other:
         visual_other_text = st.text_input(
             "Describe other visual symptoms", key="visual_other_text",
-            placeholder="Enter any other visual or observable symptoms not listed above..."
+            placeholder="Enter any other visual or observable symptoms not listed above...",
         )
     else:
         visual_other_text = ""
@@ -262,7 +825,7 @@ with tab1:
     if temp_other:
         temp_other_text = st.text_input(
             "Describe other temperature symptoms", key="temp_other_text",
-            placeholder="Enter any other temperature-related symptoms not listed above..."
+            placeholder="Enter any other temperature-related symptoms not listed above...",
         )
     else:
         temp_other_text = ""
@@ -270,16 +833,18 @@ with tab1:
     with st.form("diagnostic_request_form"):
         st.markdown("---")
         st.subheader("📝 Additional Details")
-        additional_symptoms = st.text_area("Describe any additional symptoms or context", height=150, placeholder="Example: The rattling noise only happens when accelerating above 40mph. The check engine light came on yesterday.")
+        additional_symptoms = st.text_area(
+            "Describe any additional symptoms or context", height=150,
+            placeholder="Example: The rattling noise only happens when accelerating above 40mph. "
+                        "The check engine light came on yesterday.",
+        )
         obd_codes = st.text_input("OBD-II Codes (if known)", placeholder="P0300, P0420")
+        uploaded_files = st.file_uploader(
+            "Upload Photos/Videos/Audio of the issue", accept_multiple_files=True
+        )
 
-        # File upload placeholder (Streamlit handles file uploads in memory)
-        uploaded_files = st.file_uploader("Upload Photos/Videos/Audio of the issue", accept_multiple_files=True)
-
-        # Payment Simulation
         st.markdown("### Payment")
         st.info("Consultation Fee: $20.00")
-
         submitted = st.form_submit_button("Pay & Submit Request")
 
     st.info(
@@ -301,107 +866,78 @@ with tab1:
     )
 
     if submitted:
-        # Collect all symptoms into structured data
         symptoms_data = {
             "power": {
-                "loss_of_power": power_loss,
-                "intermittent_power_loss": power_intermittent,
-                "power_surges": power_surge,
-                "increased_power": power_more,
-                "hesitation_lag": power_hesitation,
-                "no_change": power_no_change,
-                "other": power_other_text
+                "loss_of_power": power_loss, "intermittent_power_loss": power_intermittent,
+                "power_surges": power_surge, "increased_power": power_more,
+                "hesitation_lag": power_hesitation, "no_change": power_no_change,
+                "other": power_other_text,
             },
             "tactile": {
-                "vibration": tactile_vibration,
-                "rough_engine": tactile_rough,
-                "pulling_to_side": tactile_pulling,
-                "shaking": tactile_shaking,
-                "jerking": tactile_jerking,
-                "hunting": tactile_hunting,
-                "stiff_controls": tactile_stiff,
-                "no_change": tactile_no_change,
-                "other": tactile_other_text
+                "vibration": tactile_vibration, "rough_engine": tactile_rough,
+                "pulling_to_side": tactile_pulling, "shaking": tactile_shaking,
+                "jerking": tactile_jerking, "hunting": tactile_hunting,
+                "stiff_controls": tactile_stiff, "no_change": tactile_no_change,
+                "other": tactile_other_text,
             },
             "audible": {
-                "rattling": audible_rattling,
-                "knocking": audible_knocking,
-                "grinding": audible_grinding,
-                "squealing": audible_squealing,
-                "humming": audible_humming,
-                "clicking": audible_clicking,
-                "no_change": audible_no_change,
-                "other": audible_other_text
+                "rattling": audible_rattling, "knocking": audible_knocking,
+                "grinding": audible_grinding, "squealing": audible_squealing,
+                "humming": audible_humming, "clicking": audible_clicking,
+                "no_change": audible_no_change, "other": audible_other_text,
             },
             "fuel": {
-                "increased_consumption": fuel_increased,
-                "fuel_smell": fuel_smell,
-                "decreased_mileage": fuel_decreased_mileage,
-                "fuel_leak": fuel_leak,
-                "difficulty_starting": fuel_difficulty_starting,
-                "stalling": fuel_stalling,
-                "no_change": fuel_no_change,
-                "other": fuel_other_text
+                "increased_consumption": fuel_increased, "fuel_smell": fuel_smell,
+                "decreased_mileage": fuel_decreased_mileage, "fuel_leak": fuel_leak,
+                "difficulty_starting": fuel_difficulty_starting, "stalling": fuel_stalling,
+                "no_change": fuel_no_change, "other": fuel_other_text,
             },
             "visual": {
-                "white_smoke": visual_smoke_white,
-                "black_smoke": visual_smoke_black,
-                "blue_smoke": visual_smoke_blue,
-                "warning_lights": visual_warning_lights,
-                "fluid_leak": visual_fluid_leak,
-                "corrosion": visual_corrosion,
-                "no_change": visual_no_change,
-                "other": visual_other_text
+                "white_smoke": visual_smoke_white, "black_smoke": visual_smoke_black,
+                "blue_smoke": visual_smoke_blue, "warning_lights": visual_warning_lights,
+                "fluid_leak": visual_fluid_leak, "corrosion": visual_corrosion,
+                "no_change": visual_no_change, "other": visual_other_text,
             },
             "temperature": {
-                "overheating": temp_overheating,
-                "running_hot": temp_running_hot,
-                "running_cold": temp_running_cold,
-                "ac_issues": temp_ac_issues,
-                "heater_issues": temp_heater_issues,
-                "no_change": temp_no_change,
-                "other": temp_other_text
+                "overheating": temp_overheating, "running_hot": temp_running_hot,
+                "running_cold": temp_running_cold, "ac_issues": temp_ac_issues,
+                "heater_issues": temp_heater_issues, "no_change": temp_no_change,
+                "other": temp_other_text,
             },
-            "additional_details": additional_symptoms
+            "additional_details": additional_symptoms,
         }
 
-        errors = validate_input(make, model, year, mileage, vin, engine_type, transmission_type,
-                               fuel_type, last_service_date, symptoms_data, obd_codes)
-
+        errors = validate_input(
+            make, model, year, mileage, vin, engine_type, transmission_type,
+            fuel_type, last_service_date, symptoms_data, obd_codes,
+        )
         if errors:
             for error in errors:
                 st.error(error)
         else:
-            # Simulate Payment Success
             with st.spinner("Processing Payment..."):
-                # Create request object
                 request_data = {
-                    "make": make,
-                    "model": model,
-                    "year": year,
-                    "mileage": mileage,
-                    "vin": vin,
-                    "engine_type": engine_type,
-                    "transmission_type": transmission_type,
-                    "fuel_type": fuel_type,
-                    "last_service_date": last_service_date,
-                    "symptoms": symptoms_data,
-                    "obd_codes": obd_codes,
-                    # For a real app, you'd save file paths here after uploading to S3/Cloud storage
-                    "has_files": True if uploaded_files else False
+                    "make": make, "model": model, "year": year, "mileage": mileage,
+                    "vin": vin, "engine_type": engine_type, "engine_capacity": engine_capacity,
+                    "engine_code": engine_code, "transmission_type": transmission_type,
+                    "fuel_type": fuel_type, "last_service_date": last_service_date,
+                    "symptoms": symptoms_data, "obd_codes": obd_codes,
+                    "has_files": bool(uploaded_files),
+                    "user_email": current_user['email'],
                 }
-
                 req_id = create_request(request_data)
-                st.success(f"Payment Successful! Your request has been submitted.")
+                st.success("Payment Successful! Your request has been submitted.")
                 st.balloons()
                 st.markdown(f"**Your Request ID is:** `{req_id}`")
                 st.warning("Please save this ID to check your diagnosis status later.")
 
-# --- TAB 2: EXPERT DASHBOARD ---
+
+# ---------------------------------------------------------------------------
+# TAB 2: EXPERT DASHBOARD
+# ---------------------------------------------------------------------------
 with tab2:
     st.header("Expert Dashboard")
 
-    # Simple Authentication Check
     if 'expert_logged_in' not in st.session_state:
         st.session_state['expert_logged_in'] = False
 
@@ -430,19 +966,22 @@ with tab2:
                 st.info("No pending requests.")
             else:
                 for req_id, data in pending_requests.items():
-                    with st.expander(f"{data['year']} {data['make']} {data['model']} - {req_id[:8]}..."):
+                    with st.expander(
+                        f"{data.get('year', 'N/A')} {data.get('make', '?')} "
+                        f"{data.get('model', '?')} - {req_id[:8]}..."
+                    ):
                         st.write(f"**Request ID:** {req_id}")
                         st.write(f"**Submitted:** {data.get('timestamp')}")
-                        
-                        # Vehicle Details
+                        st.write(f"**Member:** {data.get('user_email', 'N/A')}")
+
                         st.markdown("### 🚗 Vehicle Details")
                         col1, col2 = st.columns(2)
                         with col1:
-                            st.write(f"**Make/Model:** {data['make']} {data['model']}")
-                            st.write(f"**Year:** {data['year']}")
-                            st.write(f"**Mileage:** {data['mileage']}")
+                            st.write(f"**Make/Model:** {data.get('make')} {data.get('model')}")
+                            st.write(f"**Year:** {data.get('year')}")
+                            st.write(f"**Mileage:** {data.get('mileage')}")
                         with col2:
-                            st.write(f"**Engine:** {data['engine_type']}")
+                            st.write(f"**Engine:** {data.get('engine_type')}")
                             if data.get('engine_capacity'):
                                 st.write(f"**Engine Capacity:** {data['engine_capacity']}")
                             if data.get('engine_code'):
@@ -453,62 +992,34 @@ with tab2:
                             st.write(f"**Last Service:** {data['last_service_date']}")
                         if data.get('obd_codes'):
                             st.write(f"**OBD Codes:** {data['obd_codes']}")
-                        
-                        # Display Symptoms
+
                         st.markdown("### 🔍 Reported Symptoms")
                         symptoms = data.get('symptoms', {})
-                        
-                        # Handle both old format (string) and new format (dict)
                         if isinstance(symptoms, str):
                             st.markdown(f"**General Description:**\n>{symptoms}")
                         else:
-                            # Power Symptoms
-                            active_power = _fmt_symptoms(symptoms.get('power', {}))
-                            if active_power:
-                                st.markdown(f"**⚡ Power:** {', '.join(active_power)}")
-
-                            # Tactile Symptoms
-                            active_tactile = _fmt_symptoms(symptoms.get('tactile', {}))
-                            if active_tactile:
-                                st.markdown(f"**👋 Tactile:** {', '.join(active_tactile)}")
-
-                            # Audible Symptoms
-                            active_audible = _fmt_symptoms(symptoms.get('audible', {}))
-                            if active_audible:
-                                st.markdown(f"**🔊 Audible:** {', '.join(active_audible)}")
-
-                            # Fuel Symptoms
-                            active_fuel = _fmt_symptoms(symptoms.get('fuel', {}))
-                            if active_fuel:
-                                st.markdown(f"**⛽ Fuel/Consumption:** {', '.join(active_fuel)}")
-
-                            # Visual Symptoms
-                            active_visual = _fmt_symptoms(symptoms.get('visual', {}))
-                            if active_visual:
-                                st.markdown(f"**👁️ Visual:** {', '.join(active_visual)}")
-
-                            # Temperature Symptoms
-                            active_temp = _fmt_symptoms(symptoms.get('temperature', {}))
-                            if active_temp:
-                                st.markdown(f"**🌡️ Temperature:** {', '.join(active_temp)}")
-
-                            # Additional Details
-                            additional = symptoms.get('additional_details', '')
-                            if additional:
-                                st.markdown(f"**📝 Additional Details:**\n>{additional}")
+                            for cat, icon in [
+                                ('power', '⚡'), ('tactile', '👋'), ('audible', '🔊'),
+                                ('fuel', '⛽'), ('visual', '👁️'), ('temperature', '🌡️'),
+                            ]:
+                                active = _fmt_symptoms(symptoms.get(cat, {}))
+                                if active:
+                                    st.markdown(f"**{icon} {cat.title()}:** {', '.join(active)}")
+                            if symptoms.get('additional_details'):
+                                st.markdown(f"**📝 Additional Details:**\n>{symptoms['additional_details']}")
 
                         if data.get('has_files'):
                             st.write("📎 *User uploaded files (placeholder)*")
 
-                        # Response Form
                         with st.form(key=f"response_form_{req_id}"):
-                            diagnosis = st.text_area("Expert Diagnosis & Recommendation", height=200, placeholder="Enter your detailed diagnosis here...")
+                            diagnosis = st.text_area(
+                                "Expert Diagnosis & Recommendation", height=200,
+                                placeholder="Enter your detailed diagnosis here...",
+                            )
                             submit_diagnosis = st.form_submit_button("Send Diagnosis")
-
                             if submit_diagnosis:
                                 if diagnosis:
-                                    success = update_request_response(req_id, diagnosis)
-                                    if success:
+                                    if update_request_response(req_id, diagnosis):
                                         st.success(f"Diagnosis sent for request {req_id}!")
                                         st.rerun()
                                     else:
@@ -518,7 +1029,10 @@ with tab2:
         else:
             st.info("No requests found.")
 
-# --- TAB 3: CHECK STATUS ---
+
+# ---------------------------------------------------------------------------
+# TAB 3: CHECK STATUS
+# ---------------------------------------------------------------------------
 with tab3:
     st.header("Check Your Diagnosis Status")
 
@@ -527,14 +1041,16 @@ with tab3:
     if st.button("Check Status"):
         if check_id:
             req_data = get_request(check_id.strip())
-
             if req_data:
                 st.subheader(f"Status: {req_data.get('status', 'Unknown').upper()}")
 
                 st.markdown("### 🚗 Vehicle Details")
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.write(f"**Vehicle:** {req_data.get('year')} {req_data.get('make')} {req_data.get('model')}")
+                    st.write(
+                        f"**Vehicle:** {req_data.get('year')} "
+                        f"{req_data.get('make')} {req_data.get('model')}"
+                    )
                     st.write(f"**Mileage:** {req_data.get('mileage')}")
                     st.write(f"**Engine:** {req_data.get('engine_type')}")
                     if req_data.get('engine_capacity'):
@@ -548,42 +1064,21 @@ with tab3:
                         st.write(f"**Fuel Type:** {req_data.get('fuel_type')}")
                     if req_data.get('last_service_date'):
                         st.write(f"**Last Service:** {req_data.get('last_service_date')}")
-                
-                # Display Symptoms
+
                 st.markdown("### 🔍 Reported Symptoms")
                 symptoms = req_data.get('symptoms', {})
-                
-                # Handle both old format (string) and new format (dict)
                 if isinstance(symptoms, str):
                     st.markdown(f"**Description:**\n>{symptoms}")
                 else:
-                    active_power = _fmt_symptoms(symptoms.get('power', {}))
-                    if active_power:
-                        st.markdown(f"**⚡ Power:** {', '.join(active_power)}")
-
-                    active_tactile = _fmt_symptoms(symptoms.get('tactile', {}))
-                    if active_tactile:
-                        st.markdown(f"**👋 Tactile:** {', '.join(active_tactile)}")
-
-                    active_audible = _fmt_symptoms(symptoms.get('audible', {}))
-                    if active_audible:
-                        st.markdown(f"**🔊 Audible:** {', '.join(active_audible)}")
-
-                    active_fuel = _fmt_symptoms(symptoms.get('fuel', {}))
-                    if active_fuel:
-                        st.markdown(f"**⛽ Fuel/Consumption:** {', '.join(active_fuel)}")
-
-                    active_visual = _fmt_symptoms(symptoms.get('visual', {}))
-                    if active_visual:
-                        st.markdown(f"**👁️ Visual:** {', '.join(active_visual)}")
-
-                    active_temp = _fmt_symptoms(symptoms.get('temperature', {}))
-                    if active_temp:
-                        st.markdown(f"**🌡️ Temperature:** {', '.join(active_temp)}")
-
-                    additional = symptoms.get('additional_details', '')
-                    if additional:
-                        st.markdown(f"**📝 Additional Details:**\n>{additional}")
+                    for cat, icon in [
+                        ('power', '⚡'), ('tactile', '👋'), ('audible', '🔊'),
+                        ('fuel', '⛽'), ('visual', '👁️'), ('temperature', '🌡️'),
+                    ]:
+                        active = _fmt_symptoms(symptoms.get(cat, {}))
+                        if active:
+                            st.markdown(f"**{icon} {cat.title()}:** {', '.join(active)}")
+                    if symptoms.get('additional_details'):
+                        st.markdown(f"**📝 Additional Details:**\n>{symptoms['additional_details']}")
 
                 if req_data.get('status') == 'completed':
                     st.markdown("---")
@@ -591,202 +1086,9 @@ with tab3:
                     st.info(req_data.get('response'))
                     st.caption(f"Responded on: {req_data.get('response_timestamp')}")
                 else:
-                    st.info("Your request is currently being reviewed by an expert. Please check back later.")
+                    st.info(
+                        "Your request is currently being reviewed by an expert. "
+                        "Please check back later."
+                    )
             else:
                 st.error("Request ID not found. Please check and try again.")
-
-# --- TAB 4: ADMIN AREA ---
-with tab4:
-    st.header("🔐 Admin Area")
-    st.markdown("Administrative dashboard for webapp monitoring and management")
-    
-    # Simple Authentication Check
-    if 'admin_logged_in' not in st.session_state:
-        st.session_state['admin_logged_in'] = False
-    
-    if not st.session_state['admin_logged_in']:
-        password = st.text_input("Enter Admin Password", type="password", key="admin_password")
-        if st.button("Login as Admin"):
-            if password == ADMIN_PASSWORD:
-                st.session_state['admin_logged_in'] = True
-                st.rerun()
-            else:
-                st.error("Incorrect admin password.")
-    else:
-        st.success("Logged in as Administrator")
-        if st.button("Logout", key="admin_logout"):
-            st.session_state['admin_logged_in'] = False
-            st.rerun()
-        
-        st.markdown("---")
-        
-        # Get all requests for statistics
-        all_requests = get_all_requests()
-        
-        # Calculate statistics
-        total_requests = len(all_requests)
-        pending_count = sum(1 for req in all_requests.values() if req.get('status') == 'pending')
-        completed_count = sum(1 for req in all_requests.values() if req.get('status') == 'completed')
-        
-        # Display key metrics
-        st.subheader("📊 Key Metrics")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Total Requests", total_requests)
-        with col2:
-            st.metric("Pending Requests", pending_count)
-        with col3:
-            st.metric("Completed Requests", completed_count)
-        
-        st.markdown("---")
-        
-        # Activity Overview
-        st.subheader("📈 Recent Activity")
-        if all_requests:
-            # Sort requests by timestamp (most recent first)
-            sorted_requests = sorted(
-                all_requests.items(), 
-                key=lambda x: x[1].get('timestamp', ''), 
-                reverse=True
-            )
-            
-            # Show recent activity timeline
-            st.markdown("**Latest 10 Requests:**")
-            for i, (req_id, data) in enumerate(sorted_requests[:10]):
-                status_icon = "✅" if data.get('status') == 'completed' else "⏳"
-                status = data.get('status', 'unknown')
-                year = data.get('year', 'N/A')
-                make = data.get('make', 'Unknown')
-                model = data.get('model', 'Unknown')
-                st.markdown(f"{status_icon} **{year} {make} {model}** - {data.get('timestamp')} - Status: {status.upper()}")
-        else:
-            st.info("No activity yet.")
-        
-        st.markdown("---")
-        
-        # Detailed Request List
-        st.subheader("🗂️ All Requests Details")
-        
-        if all_requests:
-            # Filter options
-            filter_col1, filter_col2 = st.columns(2)
-            with filter_col1:
-                status_filter = st.selectbox("Filter by Status", ["All", "Pending", "Completed"])
-            with filter_col2:
-                sort_order = st.selectbox("Sort by", ["Newest First", "Oldest First"])
-            
-            # Apply filters
-            filtered_requests = all_requests
-            if status_filter != "All":
-                filtered_requests = {k: v for k, v in all_requests.items() if v.get('status') == status_filter.lower()}
-            
-            # Sort
-            sorted_filtered = sorted(
-                filtered_requests.items(),
-                key=lambda x: x[1].get('timestamp', ''),
-                reverse=(sort_order == "Newest First")
-            )
-            
-            st.markdown(f"**Showing {len(sorted_filtered)} requests**")
-            
-            # Display detailed information for each request
-            for req_id, data in sorted_filtered:
-                status_color = "🟢" if data.get('status') == 'completed' else "🟡"
-                year = data.get('year', 'N/A')
-                make = data.get('make', 'Unknown')
-                model = data.get('model', 'Unknown')
-                with st.expander(f"{status_color} {year} {make} {model} - ID: {req_id[:12]}..."):
-                    # Request metadata
-                    st.markdown("### Request Information")
-                    meta_col1, meta_col2 = st.columns(2)
-                    with meta_col1:
-                        st.write(f"**Request ID:** `{req_id}`")
-                        st.write(f"**Submitted:** {data.get('timestamp')}")
-                        status = data.get('status', 'unknown')
-                        st.write(f"**Status:** {status.upper()}")
-                    with meta_col2:
-                        if data.get('status') == 'completed':
-                            st.write(f"**Responded:** {data.get('response_timestamp')}")
-                        st.write(f"**Has Files:** {'Yes' if data.get('has_files') else 'No'}")
-                    
-                    # Vehicle Details
-                    st.markdown("### 🚗 Vehicle Details")
-                    veh_col1, veh_col2, veh_col3 = st.columns(3)
-                    with veh_col1:
-                        st.write(f"**Make:** {data.get('make', 'Unknown')}")
-                        st.write(f"**Model:** {data.get('model', 'Unknown')}")
-                        st.write(f"**Year:** {data.get('year', 'N/A')}")
-                    with veh_col2:
-                        st.write(f"**Mileage:** {data.get('mileage', 0)} km")
-                        st.write(f"**Engine:** {data.get('engine_type', 'Unknown')}")
-                        if data.get('engine_capacity'):
-                            st.write(f"**Engine Capacity:** {data.get('engine_capacity')}")
-                        if data.get('engine_code'):
-                            st.write(f"**Engine Code:** {data.get('engine_code')}")
-                        if data.get('vin'):
-                            st.write(f"**VIN:** {data.get('vin')}")
-                    with veh_col3:
-                        st.write(f"**Transmission:** {data.get('transmission_type', 'N/A')}")
-                        st.write(f"**Fuel Type:** {data.get('fuel_type', 'N/A')}")
-                        if data.get('last_service_date'):
-                            st.write(f"**Last Service:** {data['last_service_date']}")
-                    
-                    if data.get('obd_codes'):
-                        st.write(f"**OBD Codes:** {data['obd_codes']}")
-                    
-                    # Display Symptoms
-                    st.markdown("### 🔍 Reported Symptoms")
-                    symptoms = data.get('symptoms', {})
-                    
-                    if isinstance(symptoms, str):
-                        st.markdown(f"**Description:**\n>{symptoms}")
-                    else:
-                        # Power Symptoms
-                        power_symptoms = symptoms.get('power', {})
-                        active_power = [k.replace('_', ' ').title() for k, v in power_symptoms.items() if v]
-                        if active_power:
-                            st.markdown(f"**⚡ Power:** {', '.join(active_power)}")
-                        
-                        # Tactile Symptoms
-                        tactile_symptoms = symptoms.get('tactile', {})
-                        active_tactile = [k.replace('_', ' ').title() for k, v in tactile_symptoms.items() if v]
-                        if active_tactile:
-                            st.markdown(f"**👋 Tactile:** {', '.join(active_tactile)}")
-                        
-                        # Audible Symptoms
-                        audible_symptoms = symptoms.get('audible', {})
-                        active_audible = [k.replace('_', ' ').title() for k, v in audible_symptoms.items() if v]
-                        if active_audible:
-                            st.markdown(f"**🔊 Audible:** {', '.join(active_audible)}")
-                        
-                        # Fuel Symptoms
-                        fuel_symptoms = symptoms.get('fuel', {})
-                        active_fuel = [k.replace('_', ' ').title() for k, v in fuel_symptoms.items() if v]
-                        if active_fuel:
-                            st.markdown(f"**⛽ Fuel/Consumption:** {', '.join(active_fuel)}")
-                        
-                        # Visual Symptoms
-                        visual_symptoms = symptoms.get('visual', {})
-                        active_visual = [k.replace('_', ' ').title() for k, v in visual_symptoms.items() if v]
-                        if active_visual:
-                            st.markdown(f"**👁️ Visual:** {', '.join(active_visual)}")
-                        
-                        # Temperature Symptoms
-                        temp_symptoms = symptoms.get('temperature', {})
-                        active_temp = [k.replace('_', ' ').title() for k, v in temp_symptoms.items() if v]
-                        if active_temp:
-                            st.markdown(f"**🌡️ Temperature:** {', '.join(active_temp)}")
-                        
-                        # Additional Details
-                        additional = symptoms.get('additional_details', '')
-                        if additional:
-                            st.markdown(f"**📝 Additional Details:**\n>{additional}")
-                    
-                    # Expert Response (if completed)
-                    if data.get('status') == 'completed' and data.get('response'):
-                        st.markdown("### ✅ Expert Diagnosis")
-                        st.info(data.get('response'))
-                    
-                    st.markdown("---")
-        else:
-            st.info("No requests to display.")
