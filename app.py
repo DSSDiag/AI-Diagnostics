@@ -265,6 +265,17 @@ if current_page == "admin":
 
         # ── Member management ──────────────────────────────────────────────
         st.subheader("👥 Member Management")
+
+        # Performance optimization: pre-fetch requests to avoid N+1 query inside loop
+        requests_by_user = {}
+        if all_requests:
+            for r_id, r_data in all_requests.items():
+                u_email = r_data.get('user_email', '').strip().lower()
+                if u_email:
+                    if u_email not in requests_by_user:
+                        requests_by_user[u_email] = {}
+                    requests_by_user[u_email][r_id] = r_data
+
         if all_users:
             for email, user in all_users.items():
                 status_icon = "🟢" if user.get('status') == 'active' else "🔴"
@@ -282,7 +293,7 @@ if current_page == "admin":
                         st.write(f"**Registered:** {user.get('created_at', 'N/A')}")
 
                     # Request history for this user
-                    user_reqs = get_user_requests(email)
+                    user_reqs = requests_by_user.get(email.lower().strip(), {})
                     st.markdown(f"**Diagnostic Requests:** {len(user_reqs)}")
                     if user_reqs:
                         for rid, rdata in sorted(
