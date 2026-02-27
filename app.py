@@ -38,11 +38,14 @@ st.markdown("""
 
 /* ── Typography ─────────────────────────────────────────────────────────── */
 h1, h2, h3, h4 {
-    font-family: 'Courier New', Courier, monospace !important;
-    letter-spacing: 2px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.3px;
     color: #e8820c !important;
 }
-p, label, span, div { font-family: 'Courier New', Courier, monospace; }
+p, label, span, div {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
 
 /* ── Streamlit tabs ─────────────────────────────────────────────────────── */
 .stTabs [data-baseweb="tab-list"] {
@@ -52,8 +55,8 @@ p, label, span, div { font-family: 'Courier New', Courier, monospace; }
 }
 .stTabs [data-baseweb="tab"] {
     color: #888;
-    font-family: 'Courier New', Courier, monospace;
-    letter-spacing: 1px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: 0.3px;
     font-size: 0.85rem;
     background: #1a1a22;
     border: 1px solid #2a2a35;
@@ -68,91 +71,103 @@ p, label, span, div { font-family: 'Courier New', Courier, monospace; }
 
 /* ── Inputs ─────────────────────────────────────────────────────────────── */
 input, textarea, select {
-    background: #111318 !important;
-    color: #c8c8c8 !important;
-    border: 1px solid #333 !important;
-    font-family: 'Courier New', Courier, monospace !important;
+    background: rgba(255,255,255,0.05) !important;
+    color: #e0e0e0 !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 8px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 input:focus, textarea:focus {
     border-color: #e8820c !important;
-    box-shadow: 0 0 4px rgba(232,130,12,0.4) !important;
+    box-shadow: 0 0 0 3px rgba(232,130,12,0.2) !important;
 }
 
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
 .stButton > button {
-    background: #1a1a22;
-    color: #e8820c;
-    border: 1px solid #e8820c;
-    font-family: 'Courier New', Courier, monospace;
-    letter-spacing: 1px;
-    transition: background 0.2s;
+    background: linear-gradient(135deg, #e8820c 0%, #c96d00 100%);
+    color: #fff !important;
+    border: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(232,130,12,0.25);
 }
 .stButton > button:hover {
-    background: #e8820c;
-    color: #000;
+    background: linear-gradient(135deg, #f0900f 0%, #d97800 100%);
+    box-shadow: 0 6px 18px rgba(232,130,12,0.4);
+    transform: translateY(-1px);
+    color: #fff !important;
 }
 
 /* ── Alerts ──────────────────────────────────────────────────────────────── */
-.stAlert { border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+.stAlert {
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
 
 /* ── Login / Signup card ─────────────────────────────────────────────────── */
 .auth-card {
-    border: 2px solid #e8820c;
-    border-radius: 6px;
-    padding: 32px 36px;
-    background: rgba(232,130,12,0.04);
+    border: 1px solid rgba(232,130,12,0.25);
+    border-radius: 16px;
+    padding: 40px 44px;
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(20px);
     max-width: 520px;
     margin: 0 auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(232,130,12,0.08);
 }
 .auth-header {
     text-align: center;
-    border-bottom: 1px solid #e8820c;
-    padding-bottom: 16px;
-    margin-bottom: 24px;
+    padding-bottom: 20px;
+    margin-bottom: 8px;
+}
+.auth-logo {
+    font-size: 3rem;
+    line-height: 1;
+    margin-bottom: 14px;
+    filter: drop-shadow(0 0 12px rgba(232,130,12,0.6));
 }
 .auth-header .title-lg {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     color: #e8820c;
-    font-family: 'Courier New', Courier, monospace;
-    letter-spacing: 4px;
-    font-weight: bold;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: 3px;
+    font-weight: 800;
+    text-transform: uppercase;
 }
 .auth-header .subtitle {
-    font-size: 0.75rem;
-    color: #888;
-    letter-spacing: 2px;
-    margin-top: 4px;
-}
-.desk-scene {
-    text-align: center;
-    font-size: 2.4rem;
-    line-height: 1;
-    margin: 18px 0 10px 0;
-    letter-spacing: 6px;
-    filter: drop-shadow(0 0 6px rgba(232,130,12,0.5));
+    font-size: 0.72rem;
+    color: #666;
+    letter-spacing: 1.5px;
+    margin-top: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-transform: uppercase;
 }
 .obd-readout {
-    border: 1px solid #333;
+    border: 1px solid #2a2a35;
     background: #0a0a0f;
-    padding: 10px 14px;
-    border-radius: 3px;
+    padding: 12px 16px;
+    border-radius: 8px;
     font-size: 0.7rem;
     color: #00c851;
     font-family: 'Courier New', Courier, monospace;
-    margin: 12px 0;
+    margin: 16px 0;
     white-space: pre;
     overflow-x: auto;
 }
 .rudeness-warning {
-    background: rgba(200,30,30,0.08);
-    border: 1px solid #8b1a1a;
-    border-left: 4px solid #c0392b;
-    padding: 10px 14px;
-    border-radius: 3px;
+    background: rgba(200,30,30,0.06);
+    border: 1px solid rgba(139,26,26,0.5);
+    border-left: 3px solid #c0392b;
+    padding: 12px 16px;
+    border-radius: 8px;
     color: #e07070;
     font-size: 0.78rem;
-    font-family: 'Courier New', Courier, monospace;
-    margin: 14px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 16px 0;
+    line-height: 1.5;
 }
 
 /* ── Fixed bottom-right admin button ────────────────────────────────────── */
@@ -167,11 +182,11 @@ input:focus, textarea:focus {
     border: 1px solid #3a3a4a;
     color: #555;
     padding: 5px 11px;
-    border-radius: 3px;
+    border-radius: 6px;
     font-size: 10px;
-    font-family: 'Courier New', Courier, monospace;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     text-decoration: none;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }
 .admin-access-fixed a:hover {
     border-color: #e8820c;
@@ -180,7 +195,7 @@ input:focus, textarea:focus {
 
 /* ── Expander ────────────────────────────────────────────────────────────── */
 .streamlit-expanderHeader {
-    font-family: 'Courier New', Courier, monospace !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     background: #111318 !important;
     color: #c8c8c8 !important;
 }
@@ -458,21 +473,21 @@ if 'logged_in_user' not in st.session_state:
 # ===========================================================================
 if st.session_state['logged_in_user'] is None:
 
-    # Desk scene + branding
+    # Branding card
     st.markdown("""
     <div class="auth-card">
         <div class="auth-header">
-            <div class="title-lg">DSS DIAGNOSTICS</div>
-            <div class="subtitle">AUTOMOTIVE FAULT DATABASE SYSTEM v2.0</div>
+            <div class="auth-logo">🚗</div>
+            <div class="title-lg">DSS Diagnostics</div>
+            <div class="subtitle">Automotive Fault Database System v2.0</div>
         </div>
-        <div class="desk-scene">☕ 📚 🔧 🔌 📋</div>
         <div class="obd-readout">SYSTEM READY...
 SCAN TOOL CONNECTED
 OBD-II INTERFACE: ACTIVE
 DATABASE: ONLINE  |  EXPERTS: AVAILABLE
 &gt; MEMBER LOGIN REQUIRED TO PROCEED_</div>
         <div class="rudeness-warning">
-            ⚠️ <strong>COMMUNITY STANDARDS WARNING</strong><br>
+            ⚠️ <strong>Community Standards Warning</strong><br>
             Our experts are qualified professionals who volunteer their time.
             Any abusive, rude, or disrespectful behaviour toward experts
             <strong>will result in immediate account suspension.</strong>
