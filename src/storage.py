@@ -6,6 +6,7 @@ from datetime import datetime
 
 DATA_FILE = os.getenv("DIAGNOSTICS_DATA_FILE", "diagnostics_data.json")
 USERS_FILE = os.getenv("DIAGNOSTICS_USERS_FILE", "users_data.json")
+TUTORIALS_FILE = os.getenv("DIAGNOSTICS_TUTORIALS_FILE", "tutorials_data.json")
 
 def _load_data():
     """Loads all data from the JSON file."""
@@ -70,6 +71,72 @@ def update_request_response(request_id, response_text):
         requests[request_id]['status'] = 'completed'
         requests[request_id]['response_timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         _save_data(requests)
+        return True
+    return False
+
+def _load_tutorials():
+    """Loads all tutorial requests from the JSON file."""
+    if not os.path.exists(TUTORIALS_FILE):
+        return {}
+    try:
+        with open(TUTORIALS_FILE, 'r') as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return {}
+
+def _save_tutorials(data):
+    """Saves tutorial requests to the JSON file."""
+    with open(TUTORIALS_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
+
+def create_tutorial_request(data):
+    """
+    Creates a new tutorial request.
+
+    Args:
+        data (dict): Dictionary containing tutorial request details.
+
+    Returns:
+        str: The unique tutorial request ID.
+    """
+    requests = _load_tutorials()
+    request_id = str(uuid.uuid4())
+
+    data['request_id'] = request_id
+    data['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    data['status'] = 'pending'
+    data['response'] = None
+
+    requests[request_id] = data
+    _save_tutorials(requests)
+    return request_id
+
+def get_tutorial_request(request_id):
+    """Retrieves a specific tutorial request by ID."""
+    requests = _load_tutorials()
+    return requests.get(request_id)
+
+def get_all_tutorial_requests():
+    """Retrieves all tutorial requests."""
+    return _load_tutorials()
+
+def update_tutorial_request_response(request_id, response_text):
+    """
+    Updates a tutorial request with the expert's response/link.
+
+    Args:
+        request_id (str): The ID of the tutorial request to update.
+        response_text (str): The response/tutorial link.
+
+    Returns:
+        bool: True if successful, False if request not found.
+    """
+    requests = _load_tutorials()
+    if request_id in requests:
+        requests[request_id]['response'] = response_text
+        requests[request_id]['status'] = 'completed'
+        requests[request_id]['response_timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _save_tutorials(requests)
         return True
     return False
 
