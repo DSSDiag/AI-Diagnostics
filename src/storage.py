@@ -7,20 +7,53 @@ from datetime import datetime
 DATA_FILE = os.getenv("DIAGNOSTICS_DATA_FILE", "diagnostics_data.json")
 USERS_FILE = os.getenv("DIAGNOSTICS_USERS_FILE", "users_data.json")
 
+# In-memory caches for diagnostic data
+_DATA_CACHE = None
+_DATA_MTIME = None
+_CACHED_DATA_FILE = None
+
+# In-memory caches for user data
+_USERS_CACHE = None
+_USERS_MTIME = None
+_CACHED_USERS_FILE = None
+
 def _load_data():
-    """Loads all data from the JSON file."""
+    """Loads all data from the JSON file with caching."""
+    global _DATA_CACHE, _DATA_MTIME, _CACHED_DATA_FILE
+
+    # Invalidate cache if filename has changed
+    if DATA_FILE != _CACHED_DATA_FILE:
+        _DATA_CACHE = None
+        _DATA_MTIME = None
+        _CACHED_DATA_FILE = DATA_FILE
+
     if not os.path.exists(DATA_FILE):
-        return {}
+        _DATA_CACHE = {}
+        _DATA_MTIME = None
+        return _DATA_CACHE
+
     try:
+        current_mtime = os.path.getmtime(DATA_FILE)
+        if _DATA_CACHE is not None and _DATA_MTIME == current_mtime:
+            return _DATA_CACHE
+
         with open(DATA_FILE, 'r') as f:
-            return json.load(f)
-    except json.JSONDecodeError:
+            _DATA_CACHE = json.load(f)
+            _DATA_MTIME = current_mtime
+            return _DATA_CACHE
+    except (json.JSONDecodeError, OSError):
         return {}
 
 def _save_data(data):
-    """Saves data to the JSON file."""
+    """Saves data to the JSON file and updates the cache."""
+    global _DATA_CACHE, _DATA_MTIME, _CACHED_DATA_FILE
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=4)
+
+    # Update cache
+    _DATA_CACHE = data
+    _DATA_MTIME = os.path.getmtime(DATA_FILE)
+    _CACHED_DATA_FILE = DATA_FILE
 
 def create_request(data):
     """
@@ -98,20 +131,43 @@ def update_request_files(request_id, filenames):
 # ---------------------------------------------------------------------------
 
 def _load_users():
-    """Loads all users from the JSON file."""
+    """Loads all users from the JSON file with caching."""
+    global _USERS_CACHE, _USERS_MTIME, _CACHED_USERS_FILE
+
+    # Invalidate cache if filename has changed
+    if USERS_FILE != _CACHED_USERS_FILE:
+        _USERS_CACHE = None
+        _USERS_MTIME = None
+        _CACHED_USERS_FILE = USERS_FILE
+
     if not os.path.exists(USERS_FILE):
-        return {}
+        _USERS_CACHE = {}
+        _USERS_MTIME = None
+        return _USERS_CACHE
+
     try:
+        current_mtime = os.path.getmtime(USERS_FILE)
+        if _USERS_CACHE is not None and _USERS_MTIME == current_mtime:
+            return _USERS_CACHE
+
         with open(USERS_FILE, 'r') as f:
-            return json.load(f)
-    except json.JSONDecodeError:
+            _USERS_CACHE = json.load(f)
+            _USERS_MTIME = current_mtime
+            return _USERS_CACHE
+    except (json.JSONDecodeError, OSError):
         return {}
 
 
 def _save_users(data):
-    """Saves users data to the JSON file."""
+    """Saves users data to the JSON file and updates the cache."""
+    global _USERS_CACHE, _USERS_MTIME, _CACHED_USERS_FILE
     with open(USERS_FILE, 'w') as f:
         json.dump(data, f, indent=4)
+
+    # Update cache
+    _USERS_CACHE = data
+    _USERS_MTIME = os.path.getmtime(USERS_FILE)
+    _CACHED_USERS_FILE = USERS_FILE
 
 
 def _hash_password(password, salt=None):
