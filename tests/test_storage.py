@@ -1,7 +1,7 @@
 import os
 import pytest
 import src.storage
-from src.storage import create_request, get_request, update_request_response, get_all_requests
+from src.storage import create_request, get_request, update_request_response, get_all_requests, update_request_files
 
 @pytest.fixture(autouse=True)
 def mock_storage_path(tmp_path, monkeypatch):
@@ -43,3 +43,28 @@ def test_full_workflow():
     # 5. Check All Requests
     all_reqs = get_all_requests()
     assert len(all_reqs) == 1
+
+def test_update_request_files_success():
+    """Test successful update of a request with files."""
+    data = {
+        "make": "Ford",
+        "model": "Mustang",
+        "has_files": False
+    }
+    request_id = create_request(data)
+
+    filenames = ["image1.png", "video.mp4"]
+    success = update_request_files(request_id, filenames)
+    assert success is True
+
+    req_updated = get_request(request_id)
+    assert req_updated['has_files'] is True
+    assert req_updated['files'] == filenames
+
+def test_update_request_files_not_found():
+    """Test update_request_files fails when request ID is not found."""
+    # Act
+    success = update_request_files("non_existent_id", ["file.jpg"])
+
+    # Assert
+    assert success is False
