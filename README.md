@@ -63,7 +63,7 @@ This application allows car owners to submit detailed reports of their vehicle i
 
 3. **Expert Flow**:
    - Go to the **"Expert Dashboard (For Mechanics)"** tab.
-   - Login with the password: `password123`.
+   - Login with the expert password (configured via environment variables).
    - Select a pending request to review.
    - Type your diagnosis and click **"Send Diagnosis"**.
 
@@ -73,8 +73,17 @@ This application allows car owners to submit detailed reports of their vehicle i
 
 5. **Admin Flow**:
    - Go to the **"Admin Area"** tab.
-   - Login with the password: `admin456`.
+   - Login with the admin password (configured via environment variables).
    - View key metrics, recent activity, and full request details.
+
+## Security Configuration
+
+The application requires environment variables to be set for expert and admin access. Before running the application, set the following variables:
+
+```bash
+export EXPERT_PASSWORD="your_secure_expert_password"
+export ADMIN_PASSWORD="your_secure_admin_password"
+```
 
 ## Project Structure
 
