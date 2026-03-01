@@ -1,7 +1,8 @@
 import os
 import pytest
+import uuid
 import src.storage
-from src.storage import create_request, get_request, update_request_response, get_all_requests
+from src.storage import create_request, get_request, update_request_response, get_all_requests, update_request_files
 
 @pytest.fixture(autouse=True)
 def mock_storage_path(tmp_path, monkeypatch):
@@ -43,3 +44,24 @@ def test_full_workflow():
     # 5. Check All Requests
     all_reqs = get_all_requests()
     assert len(all_reqs) == 1
+
+def test_update_request_files_non_existent():
+    # Attempt to update files for a request ID that doesn't exist
+    random_uuid = str(uuid.uuid4())
+    success = update_request_files(random_uuid, ["file1.jpg", "file2.png"])
+    assert success is False
+
+def test_update_request_files_success():
+    # Create a request
+    data = {"make": "Ford", "model": "Focus", "has_files": False}
+    request_id = create_request(data)
+
+    # Update files
+    filenames = ["img1.jpg", "doc.pdf"]
+    success = update_request_files(request_id, filenames)
+    assert success is True
+
+    # Verify updates
+    req = get_request(request_id)
+    assert req['has_files'] is True
+    assert req['files'] == filenames
