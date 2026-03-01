@@ -3,8 +3,9 @@ from src.storage import (
     create_request, get_request, get_all_requests, update_request_response,
     update_request_files, create_user, get_user, get_all_users, verify_user,
     update_user_status, delete_user, get_user_requests,
+    create_tutorial_request, get_tutorial_request, get_all_tutorial_requests, update_tutorial_request_response
 )
-from src.validation import validate_input, validate_signup
+from src.validation import validate_input, validate_signup, validate_tutorial_request
 
 
 def _fmt_symptoms(d):
@@ -612,10 +613,11 @@ with top_col2:
 
 st.markdown("---")
 
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "🚗 Submit Issue",
     "🔧 Expert Dashboard",
     "🔍 Check Status",
+    "🎥 Custom Tutorial",
 ])
 
 # ---------------------------------------------------------------------------
@@ -1055,18 +1057,62 @@ with tab2:
         else:
             st.info("No requests found.")
 
+        st.markdown("---")
+        st.subheader("Pending Tutorial Requests")
+        all_tutorials = get_all_tutorial_requests()
+        if all_tutorials:
+            pending_tutorials = {k: v for k, v in all_tutorials.items() if v.get('status') == 'pending'}
+
+            if not pending_tutorials:
+                st.info("No pending tutorial requests.")
+            else:
+                for tut_id, data in pending_tutorials.items():
+                    with st.expander(
+                        f"Tutorial: {data.get('year', 'N/A')} {data.get('make', '?')} "
+                        f"{data.get('model', '?')} - {tut_id[:8]}..."
+                    ):
+                        st.write(f"**Request ID:** {tut_id}")
+                        st.write(f"**Submitted:** {data.get('timestamp')}")
+                        st.write(f"**User Email:** {data.get('user_email', 'N/A')}")
+                        st.markdown("### 🚗 Vehicle Details")
+                        st.write(f"**Vehicle:** {data.get('year')} {data.get('make')} {data.get('model')}")
+                        st.markdown("### 🎥 Tutorial Details")
+                        st.write(f"**Description:** {data.get('description')}")
+                        st.write(f"**Preferred Medium:** {data.get('medium')}")
+
+                        with st.form(key=f"tutorial_response_form_{tut_id}"):
+                            tutorial_response = st.text_area(
+                                "Tutorial Content/Link", height=150,
+                                placeholder="Provide the tutorial link or instructions here...",
+                            )
+                            submit_tutorial = st.form_submit_button("Send Tutorial")
+                            if submit_tutorial:
+                                if tutorial_response:
+                                    if update_tutorial_request_response(tut_id, tutorial_response):
+                                        st.success(f"Tutorial sent for request {tut_id}!")
+                                        st.rerun()
+                                    else:
+                                        st.error("Failed to update tutorial request.")
+                                else:
+                                    st.warning("Please enter the tutorial content or link.")
+        else:
+            st.info("No tutorial requests found.")
+
 
 # ---------------------------------------------------------------------------
 # TAB 3: CHECK STATUS
 # ---------------------------------------------------------------------------
 with tab3:
-    st.header("Check Your Diagnosis Status")
+    st.header("Check Your Status")
 
     check_id = st.text_input("Enter your Request ID")
 
     if st.button("Check Status"):
         if check_id:
-            req_data = get_request(check_id.strip())
+            clean_id = check_id.strip()
+            req_data = get_request(clean_id)
+            tut_data = get_tutorial_request(clean_id) if not req_data else None
+
             if req_data:
                 st.subheader(f"Status: {req_data.get('status', 'Unknown').upper()}")
 
@@ -1116,5 +1162,79 @@ with tab3:
                         "Your request is currently being reviewed by an expert. "
                         "Please check back later."
                     )
+            elif tut_data:
+                st.subheader(f"Tutorial Status: {tut_data.get('status', 'Unknown').upper()}")
+
+                st.markdown("### 🚗 Vehicle Details")
+                st.write(f"**Vehicle:** {tut_data.get('year')} {tut_data.get('make')} {tut_data.get('model')}")
+
+                st.markdown("### 🎥 Tutorial Request Details")
+                st.write(f"**Description:** {tut_data.get('description')}")
+                st.write(f"**Preferred Medium:** {tut_data.get('medium')}")
+
+                if tut_data.get('status') == 'completed':
+                    st.markdown("---")
+                    st.subheader("✅ Expert Tutorial Response")
+                    st.info(tut_data.get('response'))
+                    st.caption(f"Responded on: {tut_data.get('response_timestamp')}")
+                else:
+                    st.info(
+                        "Your custom tutorial request is currently being prepared by an expert. "
+                        "Please check back later."
+                    )
             else:
                 st.error("Request ID not found. Please check and try again.")
+
+
+# ---------------------------------------------------------------------------
+# TAB 4: CUSTOM TUTORIAL
+# ---------------------------------------------------------------------------
+with tab4:
+    st.header("Request a Custom Tutorial")
+    st.markdown("Need a specific walkthrough? Request a custom instructional video or guide made just for your vehicle.")
+
+    with st.form("tutorial_form"):
+        st.subheader("Vehicle Details")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            tut_make = st.selectbox("Car Make", AUSTRALIAN_MAKES, key="tut_make")
+        with col2:
+            tut_models = MODELS_BY_MAKE.get(tut_make, ["Select Model"])
+            tut_model = st.selectbox("Car Model", tut_models, key="tut_model")
+        with col3:
+            current_year = 2025
+            years = [0] + list(range(current_year, 1979, -1))
+            tut_year = st.selectbox("Year", years, format_func=lambda x: "Select Year" if x == 0 else str(x), key="tut_year")
+
+        st.subheader("Tutorial Details")
+        tut_desc = st.text_area("What do you need a tutorial for?", height=150, placeholder="e.g. How to replace the cabin air filter, How to check transmission fluid level...")
+
+        st.subheader("Preferred Medium")
+        tut_medium = st.radio(
+            "What format would be most helpful?",
+            options=["Video", "Images", "Text/Instructions", "Whatever is most useful"],
+            index=0
+        )
+
+        tut_submitted = st.form_submit_button("Submit Request")
+
+    if tut_submitted:
+        errors = validate_tutorial_request(tut_make, tut_model, tut_year, tut_desc, tut_medium)
+        if errors:
+            for error in errors:
+                st.error(error)
+        else:
+            with st.spinner("Submitting request..."):
+                request_data = {
+                    "make": tut_make,
+                    "model": tut_model,
+                    "year": tut_year,
+                    "description": tut_desc,
+                    "medium": tut_medium,
+                    "user_email": current_user['email'],
+                }
+                req_id = create_tutorial_request(request_data)
+                st.success("Tutorial Request Submitted!")
+                st.balloons()
+                st.markdown(f"**Your Tutorial Request ID is:** `{req_id}`")
+                st.warning("Please save this ID to check your tutorial status later.")

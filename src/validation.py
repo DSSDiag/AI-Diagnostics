@@ -219,3 +219,51 @@ def validate_input(make, model, year, mileage, vin, engine_type, transmission_ty
             errors.append("OBD Codes can only contain alphanumeric characters, commas, and spaces.")
 
     return errors
+
+def validate_tutorial_request(make, model, year, description, medium):
+    """
+    Validates a tutorial request.
+
+    Args:
+        make (str): Car make.
+        model (str): Car model.
+        year (int): Car year.
+        description (str): Description of the tutorial requested.
+        medium (str): Preferred medium.
+
+    Returns:
+        list: Error messages. Empty list means valid.
+    """
+    errors = []
+
+    # Validate Make
+    if not make or make == "Select Make":
+        errors.append("Please select a Car Make from the dropdown.")
+    elif len(make) > 50:
+        errors.append("Car Make must be less than 50 characters.")
+
+    # Validate Model
+    if not model or model == "Select Model":
+        errors.append("Please select a Car Model from the dropdown.")
+    elif len(model) > 50:
+        errors.append("Car Model must be less than 50 characters.")
+
+    # Validate Year
+    if not isinstance(year, int) or year == 0 or year < 1980 or year > 2025:
+        errors.append("Please select a valid Year from the dropdown.")
+
+    # Validate Description
+    desc_str = description.strip() if description else ""
+    if not desc_str:
+        errors.append("Tutorial description is required.")
+    elif len(desc_str) > 2000:
+        errors.append("Description must be less than 2000 characters.")
+    elif re.search(r"<script.*?>", desc_str, re.IGNORECASE | re.DOTALL):
+        errors.append("Invalid characters detected in description.")
+
+    # Validate Medium
+    valid_mediums = ["Video", "Images", "Text/Instructions", "Whatever is most useful"]
+    if medium not in valid_mediums:
+        errors.append("Invalid preferred medium selected.")
+
+    return errors

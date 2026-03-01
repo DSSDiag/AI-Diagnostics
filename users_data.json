@@ -1,0 +1,12 @@
+{
+    "test@example.com": {
+        "email": "test@example.com",
+        "name": "Test User",
+        "dob": "1990-01-01",
+        "occupation": "Tester",
+        "password_hash": "1bd1b349892a87ed74e7ce79ff38988402dbe8cd163f9115ef0072e9773fa764",
+        "salt": "193e1ceb5c9088c2a8884801c736dd7a",
+        "status": "active",
+        "created_at": "2026-03-01 05:19:09"
+    }
+}
