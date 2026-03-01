@@ -7,6 +7,7 @@ from datetime import datetime
 DATA_FILE = os.getenv("DIAGNOSTICS_DATA_FILE", "diagnostics_data.json")
 USERS_FILE = os.getenv("DIAGNOSTICS_USERS_FILE", "users_data.json")
 TUTORIALS_FILE = os.getenv("DIAGNOSTICS_TUTORIALS_FILE", "tutorials_data.json")
+COMMON_PROBLEMS_FILE = os.getenv("DIAGNOSTICS_COMMON_PROBLEMS_FILE", "common_problems_data.json")
 
 # In-memory caches for diagnostic data
 _DATA_CACHE = None
@@ -342,3 +343,121 @@ def get_user_requests(email):
         k: v for k, v in all_reqs.items()
         if v.get('user_email', '').lower() == email_key
     }
+
+
+# ---------------------------------------------------------------------------
+# Common problems library
+# ---------------------------------------------------------------------------
+
+def _load_common_problems():
+    """Loads all common problem entries from the JSON file."""
+    if not os.path.exists(COMMON_PROBLEMS_FILE):
+        return {}
+    try:
+        with open(COMMON_PROBLEMS_FILE, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def _save_common_problems(data):
+    """Saves common problem entries to the JSON file."""
+    with open(COMMON_PROBLEMS_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
+
+
+def create_common_problem(data):
+    """
+    Creates a new common problem entry.
+
+    Args:
+        data (dict): Dictionary with keys: make, model, year_from, year_to,
+                     fault, symptoms (list), repair, obd_codes (optional).
+
+    Returns:
+        str: The unique problem ID.
+    """
+    problems = _load_common_problems()
+    problem_id = str(uuid.uuid4())
+
+    data['problem_id'] = problem_id
+    data['created_at'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    problems[problem_id] = data
+    _save_common_problems(problems)
+    return problem_id
+
+
+def get_common_problem(problem_id):
+    """Retrieves a specific common problem entry by ID."""
+    problems = _load_common_problems()
+    return problems.get(problem_id)
+
+
+def get_all_common_problems():
+    """Retrieves all common problem entries."""
+    return _load_common_problems()
+
+
+def update_common_problem(problem_id, data):
+    """
+    Updates an existing common problem entry.
+
+    Args:
+        problem_id (str): The ID of the entry to update.
+        data (dict): Updated fields.
+
+    Returns:
+        bool: True if successful, False if not found.
+    """
+    problems = _load_common_problems()
+    if problem_id in problems:
+        problems[problem_id].update(data)
+        _save_common_problems(problems)
+        return True
+    return False
+
+
+def delete_common_problem(problem_id):
+    """
+    Deletes a common problem entry.
+
+    Returns:
+        bool: True if successful, False if not found.
+    """
+    problems = _load_common_problems()
+    if problem_id in problems:
+        del problems[problem_id]
+        _save_common_problems(problems)
+        return True
+    return False
+
+
+def search_common_problems(make=None, model=None, year=None):
+    """
+    Searches the common problems library by make, model and/or year.
+
+    Args:
+        make (str): Vehicle make to filter by (optional).
+        model (str): Vehicle model to filter by (optional).
+        year (int): Vehicle year to filter by (optional, matched against year_from/year_to range).
+
+    Returns:
+        dict: Matching common problem entries keyed by problem ID.
+    """
+    problems = _load_common_problems()
+    results = {}
+    for pid, entry in problems.items():
+        if make and entry.get('make', '').lower() != make.lower():
+            continue
+        if model and entry.get('model', '').lower() != model.lower():
+            continue
+        if year is not None:
+            year_from = entry.get('year_from')
+            year_to = entry.get('year_to')
+            if year_from is not None and year < year_from:
+                continue
+            if year_to is not None and year > year_to:
+                continue
+        results[pid] = entry
+    return results

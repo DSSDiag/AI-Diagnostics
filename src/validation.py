@@ -288,3 +288,87 @@ def validate_tutorial_request(make, model, year, description, medium):
         errors.append("Invalid preferred medium selected.")
 
     return errors
+
+
+def validate_common_problem(make, model, year_from, year_to, fault, symptoms, repair, obd_codes=""):
+    """
+    Validates a common problem library entry.
+
+    Args:
+        make (str): Vehicle make.
+        model (str): Vehicle model.
+        year_from (int): Start year of affected range.
+        year_to (int): End year of affected range.
+        fault (str): Short fault title/name.
+        symptoms (list): List of symptom strings.
+        repair (str): Repair description.
+        obd_codes (str): OBD-II codes (optional).
+
+    Returns:
+        list: Error messages. Empty list means valid.
+    """
+    errors = []
+
+    # Make
+    if not make or make == "Select Make":
+        errors.append("Please select a vehicle make.")
+    elif len(make) > 50:
+        errors.append("Make must be less than 50 characters.")
+
+    # Model
+    if not model or model == "Select Model":
+        errors.append("Please select a vehicle model.")
+    elif len(model) > 50:
+        errors.append("Model must be less than 50 characters.")
+
+    # Year range
+    current_year = 2025
+    if not isinstance(year_from, int) or year_from < 1980 or year_from > current_year:
+        errors.append("Year From must be between 1980 and 2025.")
+    if not isinstance(year_to, int) or year_to < 1980 or year_to > current_year:
+        errors.append("Year To must be between 1980 and 2025.")
+    if isinstance(year_from, int) and isinstance(year_to, int) and year_to < year_from:
+        errors.append("Year To must be greater than or equal to Year From.")
+
+    # Fault
+    fault_str = fault.strip() if fault else ""
+    if not fault_str:
+        errors.append("Fault description is required.")
+    elif len(fault_str) > 200:
+        errors.append("Fault description must be less than 200 characters.")
+    elif re.search(r"<[^>]+>", fault_str, re.IGNORECASE | re.DOTALL):
+        errors.append("Invalid characters detected in fault description.")
+
+    # Symptoms
+    if not symptoms or (isinstance(symptoms, list) and len(symptoms) == 0):
+        errors.append("At least one symptom is required.")
+    elif isinstance(symptoms, list):
+        for i, sym in enumerate(symptoms):
+            sym_str = sym.strip() if sym else ""
+            if not sym_str:
+                continue
+            if len(sym_str) > 300:
+                errors.append(f"Symptom {i + 1} must be less than 300 characters.")
+            elif re.search(r"<[^>]+>", sym_str, re.IGNORECASE | re.DOTALL):
+                errors.append(f"Invalid characters detected in symptom {i + 1}.")
+        if not any(s.strip() for s in symptoms):
+            errors.append("At least one symptom is required.")
+
+    # Repair
+    repair_str = repair.strip() if repair else ""
+    if not repair_str:
+        errors.append("Repair description is required.")
+    elif len(repair_str) > 2000:
+        errors.append("Repair description must be less than 2000 characters.")
+    elif re.search(r"<script.*?>", repair_str, re.IGNORECASE | re.DOTALL):
+        errors.append("Invalid characters detected in repair description.")
+
+    # OBD codes (optional)
+    if obd_codes:
+        obd_str = obd_codes.strip()
+        if len(obd_str) > 100:
+            errors.append("OBD codes must be less than 100 characters.")
+        elif not re.match(r"^[A-Z0-9,\s]+$", obd_str):
+            errors.append("OBD codes can only contain alphanumeric characters, commas, and spaces.")
+
+    return errors
