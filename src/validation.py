@@ -80,26 +80,9 @@ def validate_signup(name, email, password, dob, occupation):
 
     return errors
 
-def validate_input(make, model, year, mileage, vin, engine_type, transmission_type, 
-                   fuel_type, last_service_date, symptoms, obd_codes):
+def _validate_vehicle_details(make, model, year, mileage, vin, engine_type, transmission_type, fuel_type):
     """
-    Validates the input data for a diagnostic request.
-
-    Args:
-        make (str): Car make.
-        model (str): Car model.
-        year (int): Car year.
-        mileage (int): Car mileage.
-        vin (str): Vehicle Identification Number (optional).
-        engine_type (str): Engine type.
-        transmission_type (str): Transmission type.
-        fuel_type (str): Fuel type.
-        last_service_date (str): Last service date (optional).
-        symptoms (dict): Dictionary of symptoms organized by category.
-        obd_codes (str): OBD-II codes (optional).
-
-    Returns:
-        list: A list of error messages. If empty, input is valid.
+    Validates the vehicle details for a diagnostic request.
     """
     errors = []
 
@@ -145,15 +128,14 @@ def validate_input(make, model, year, mileage, vin, engine_type, transmission_ty
     if fuel_type not in valid_fuel_types:
         errors.append("Invalid Fuel Type selected.")
 
-    # Validate Last Service Date (Optional)
-    if last_service_date:
-        if len(last_service_date) > 100:
-            errors.append("Last Service Date must be less than 100 characters.")
-        # Basic check for potentially malicious content
-        elif re.search(r"<script.*?>", last_service_date, re.IGNORECASE | re.DOTALL):
-            errors.append("Invalid characters detected in Last Service Date.")
+    return errors
 
-    # Validate Symptoms
+def _validate_symptoms(symptoms):
+    """
+    Validates the symptoms dictionary or string.
+    """
+    errors = []
+
     if isinstance(symptoms, dict):
         # Check if at least one symptom is selected in each category
         categories_to_check = ['power', 'tactile', 'audible', 'fuel', 'visual', 'temperature']
@@ -210,6 +192,45 @@ def validate_input(make, model, year, mileage, vin, engine_type, transmission_ty
             errors.append("Symptoms description must be less than 1000 characters.")
         elif re.search(r"<script.*?>", symptoms, re.IGNORECASE | re.DOTALL):
             errors.append("Invalid characters detected in Symptoms.")
+
+    return errors
+
+def validate_input(make, model, year, mileage, vin, engine_type, transmission_type,
+                   fuel_type, last_service_date, symptoms, obd_codes):
+    """
+    Validates the input data for a diagnostic request.
+
+    Args:
+        make (str): Car make.
+        model (str): Car model.
+        year (int): Car year.
+        mileage (int): Car mileage.
+        vin (str): Vehicle Identification Number (optional).
+        engine_type (str): Engine type.
+        transmission_type (str): Transmission type.
+        fuel_type (str): Fuel type.
+        last_service_date (str): Last service date (optional).
+        symptoms (dict): Dictionary of symptoms organized by category.
+        obd_codes (str): OBD-II codes (optional).
+
+    Returns:
+        list: A list of error messages. If empty, input is valid.
+    """
+    errors = []
+
+    # Validate Vehicle Details
+    errors.extend(_validate_vehicle_details(make, model, year, mileage, vin, engine_type, transmission_type, fuel_type))
+
+    # Validate Last Service Date (Optional)
+    if last_service_date:
+        if len(last_service_date) > 100:
+            errors.append("Last Service Date must be less than 100 characters.")
+        # Basic check for potentially malicious content
+        elif re.search(r"<script.*?>", last_service_date, re.IGNORECASE | re.DOTALL):
+            errors.append("Invalid characters detected in Last Service Date.")
+
+    # Validate Symptoms
+    errors.extend(_validate_symptoms(symptoms))
 
     # Validate OBD Codes (Optional)
     if obd_codes:
