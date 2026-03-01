@@ -25,6 +25,12 @@ st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_i
 EXPERT_PASSWORD = "password123"
 ADMIN_PASSWORD = "admin456"
 
+# Common UI elements
+SYMPTOM_CATEGORIES = [
+    ('power', '⚡'), ('tactile', '👋'), ('audible', '🔊'),
+    ('fuel', '⛽'), ('visual', '👁️'), ('temperature', '🌡️'),
+]
+
 # ---------------------------------------------------------------------------
 # Global CSS – automotive diagnostics database / workshop desk theme
 # ---------------------------------------------------------------------------
@@ -439,10 +445,7 @@ if current_page == "admin":
                     if isinstance(symptoms, str):
                         st.markdown(f"**Symptoms:** {symptoms}")
                     else:
-                        for cat, icon in [
-                            ('power', '⚡'), ('tactile', '👋'), ('audible', '🔊'),
-                            ('fuel', '⛽'), ('visual', '👁️'), ('temperature', '🌡️'),
-                        ]:
+                        for cat, icon in SYMPTOM_CATEGORIES:
                             active = _fmt_symptoms(symptoms.get(cat, {}))
                             if active:
                                 st.markdown(f"**{icon} {cat.title()}:** {', '.join(active)}")
@@ -1026,10 +1029,7 @@ with tab2:
                         if isinstance(symptoms, str):
                             st.markdown(f"**General Description:**\n>{symptoms}")
                         else:
-                            for cat, icon in [
-                                ('power', '⚡'), ('tactile', '👋'), ('audible', '🔊'),
-                                ('fuel', '⛽'), ('visual', '👁️'), ('temperature', '🌡️'),
-                            ]:
+                            for cat, icon in SYMPTOM_CATEGORIES:
                                 active = _fmt_symptoms(symptoms.get(cat, {}))
                                 if active:
                                     st.markdown(f"**{icon} {cat.title()}:** {', '.join(active)}")
@@ -1142,10 +1142,7 @@ with tab3:
                 if isinstance(symptoms, str):
                     st.markdown(f"**Description:**\n>{symptoms}")
                 else:
-                    for cat, icon in [
-                        ('power', '⚡'), ('tactile', '👋'), ('audible', '🔊'),
-                        ('fuel', '⛽'), ('visual', '👁️'), ('temperature', '🌡️'),
-                    ]:
+                    for cat, icon in SYMPTOM_CATEGORIES:
                         active = _fmt_symptoms(symptoms.get(cat, {}))
                         if active:
                             st.markdown(f"**{icon} {cat.title()}:** {', '.join(active)}")
