@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from src.storage import (
     create_request, get_request, get_all_requests, update_request_response,
@@ -21,9 +22,9 @@ def _fmt_symptoms(d):
 
 st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_icon="🚗")
 
-# Mock passwords for expert and admin roles
-EXPERT_PASSWORD = "password123"
-ADMIN_PASSWORD = "admin456"
+# Passwords for expert and admin roles, loaded from environment variables
+EXPERT_PASSWORD = os.environ.get("EXPERT_PASSWORD", "password123")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin456")
 
 # ---------------------------------------------------------------------------
 # Global CSS – automotive diagnostics database / workshop desk theme
