@@ -350,9 +350,24 @@ def get_user_requests(email):
 # ---------------------------------------------------------------------------
 
 def _load_common_problems():
-    """Loads all common problem entries from the JSON file."""
+    """Loads all common problem entries from the JSON file.
+
+    On first run (file absent), the database is seeded with a curated set of
+    well-known recurring vehicle faults so the library is immediately useful.
+    """
     if not os.path.exists(COMMON_PROBLEMS_FILE):
-        return {}
+        # Import here to avoid circular imports and keep the module lightweight
+        import copy
+        from src.seed_common_problems import SEED_PROBLEMS
+        seed_data = {}
+        for entry in SEED_PROBLEMS:
+            problem_id = str(uuid.uuid4())
+            entry = copy.deepcopy(entry)  # don't mutate the module-level list
+            entry['problem_id'] = problem_id
+            entry['created_at'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            seed_data[problem_id] = entry
+        _save_common_problems(seed_data)
+        return seed_data
     try:
         with open(COMMON_PROBLEMS_FILE, 'r') as f:
             return json.load(f)

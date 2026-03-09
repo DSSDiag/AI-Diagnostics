@@ -55,9 +55,9 @@ def test_get_all():
     pid1 = create_common_problem(_sample_entry())
     pid2 = create_common_problem(_sample_entry(make="Ford", model="Ranger"))
     all_probs = get_all_common_problems()
+    # Both newly created entries must be present (seed data may also be present)
     assert pid1 in all_probs
     assert pid2 in all_probs
-    assert len(all_probs) == 2
 
 
 def test_update_common_problem():
@@ -86,34 +86,38 @@ def test_delete_nonexistent_returns_false():
 
 
 def test_search_by_make():
-    create_common_problem(_sample_entry(make="Toyota"))
+    # Use a make guaranteed not to be in the seed data
+    create_common_problem(_sample_entry(make="Dacia"))
     create_common_problem(_sample_entry(make="Ford", model="Ranger"))
-    results = search_common_problems(make="Toyota")
-    assert all(e["make"] == "Toyota" for e in results.values())
+    results = search_common_problems(make="Dacia")
+    assert all(e["make"] == "Dacia" for e in results.values())
     assert len(results) == 1
 
 
 def test_search_by_model():
-    create_common_problem(_sample_entry(model="Hilux"))
-    create_common_problem(_sample_entry(model="Camry"))
-    results = search_common_problems(model="Camry")
+    # Use a model guaranteed not to be in the seed data
+    create_common_problem(_sample_entry(make="Dacia", model="Duster"))
+    create_common_problem(_sample_entry(make="Dacia", model="Logan"))
+    results = search_common_problems(model="Logan")
     assert len(results) == 1
-    assert list(results.values())[0]["model"] == "Camry"
+    assert list(results.values())[0]["model"] == "Logan"
 
 
 def test_search_by_year_within_range():
-    create_common_problem(_sample_entry(year_from=2005, year_to=2015))
-    create_common_problem(_sample_entry(year_from=2016, year_to=2022, model="Camry"))
+    # Use a make not in the seed data and a distinctive year range to isolate results
+    create_common_problem(_sample_entry(make="Dacia", model="Duster", year_from=1981, year_to=1982))
+    create_common_problem(_sample_entry(make="Dacia", model="Logan", year_from=1983, year_to=1984))
 
-    results_2010 = search_common_problems(year=2010)
-    assert len(results_2010) == 1
+    results_1981 = search_common_problems(make="Dacia", year=1981)
+    assert len(results_1981) == 1
+    assert list(results_1981.values())[0]["model"] == "Duster"
 
-    results_2018 = search_common_problems(year=2018)
-    assert len(results_2018) == 1
-    assert list(results_2018.values())[0]["model"] == "Camry"
+    results_1983 = search_common_problems(make="Dacia", year=1983)
+    assert len(results_1983) == 1
+    assert list(results_1983.values())[0]["model"] == "Logan"
 
-    results_all = search_common_problems()
-    assert len(results_all) == 2
+    results_all_dacia = search_common_problems(make="Dacia")
+    assert len(results_all_dacia) == 2
 
 
 def test_search_no_match():
@@ -123,7 +127,8 @@ def test_search_no_match():
 
 
 def test_search_empty_library():
-    results = search_common_problems(make="Toyota")
+    # The library is seeded on first load, so search for a make that will never be seeded
+    results = search_common_problems(make="__NonExistentMake__")
     assert results == {}
 
 
