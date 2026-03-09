@@ -23,8 +23,8 @@ def _fmt_symptoms(d):
 st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_icon="🚗")
 
 # Passwords for expert and admin roles, loaded from environment variables
-EXPERT_PASSWORD = os.environ.get("EXPERT_PASSWORD", "password123")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin456")
+EXPERT_PASSWORD = os.environ.get("EXPERT_PASSWORD")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 
 # Common UI elements
 SYMPTOM_CATEGORIES = [
@@ -251,11 +251,11 @@ if current_page == "admin":
         st.markdown("#### Administrator Login")
         adm_pw = st.text_input("Admin Password", type="password", key="admin_pw_input")
         if st.button("Login as Admin"):
-            if adm_pw == ADMIN_PASSWORD:
+            if ADMIN_PASSWORD and adm_pw == ADMIN_PASSWORD:
                 st.session_state['admin_logged_in'] = True
                 st.rerun()
             else:
-                st.error("Incorrect admin password.")
+                st.error("Incorrect admin password or admin access disabled.")
     else:
         st.success("Logged in as Administrator")
         if st.button("Logout Admin", key="admin_logout"):
@@ -976,11 +976,11 @@ with tab2:
     if not st.session_state['expert_logged_in']:
         password = st.text_input("Enter Expert Password", type="password")
         if st.button("Login"):
-            if password == EXPERT_PASSWORD:
+            if EXPERT_PASSWORD and password == EXPERT_PASSWORD:
                 st.session_state['expert_logged_in'] = True
                 st.rerun()
             else:
-                st.error("Incorrect password.")
+                st.error("Incorrect password or expert access disabled.")
     else:
         st.success("Logged in as Expert")
         if st.button("Logout"):
