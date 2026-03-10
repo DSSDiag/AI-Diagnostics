@@ -18,6 +18,11 @@ _USERS_CACHE = None
 _USERS_MTIME = None
 _CACHED_USERS_FILE = None
 
+# In-memory caches for tutorial data
+_TUTORIALS_CACHE = None
+_TUTORIALS_MTIME = None
+_CACHED_TUTORIALS_FILE = None
+
 def _load_data():
     """Loads all data from the JSON file with caching."""
     global _DATA_CACHE, _DATA_MTIME, _CACHED_DATA_FILE
@@ -108,19 +113,42 @@ def update_request_response(request_id, response_text):
     return False
 
 def _load_tutorials():
-    """Loads all tutorial requests from the JSON file."""
+    """Loads all tutorial requests from the JSON file with caching."""
+    global _TUTORIALS_CACHE, _TUTORIALS_MTIME, _CACHED_TUTORIALS_FILE
+
+    # Invalidate cache if filename has changed
+    if TUTORIALS_FILE != _CACHED_TUTORIALS_FILE:
+        _TUTORIALS_CACHE = None
+        _TUTORIALS_MTIME = None
+        _CACHED_TUTORIALS_FILE = TUTORIALS_FILE
+
     if not os.path.exists(TUTORIALS_FILE):
-        return {}
+        _TUTORIALS_CACHE = {}
+        _TUTORIALS_MTIME = None
+        return _TUTORIALS_CACHE
+
     try:
+        current_mtime = os.path.getmtime(TUTORIALS_FILE)
+        if _TUTORIALS_CACHE is not None and _TUTORIALS_MTIME == current_mtime:
+            return _TUTORIALS_CACHE
+
         with open(TUTORIALS_FILE, 'r') as f:
-            return json.load(f)
-    except json.JSONDecodeError:
+            _TUTORIALS_CACHE = json.load(f)
+            _TUTORIALS_MTIME = current_mtime
+            return _TUTORIALS_CACHE
+    except (json.JSONDecodeError, OSError):
         return {}
 
 def _save_tutorials(data):
-    """Saves tutorial requests to the JSON file."""
+    """Saves tutorial requests to the JSON file and updates the cache."""
+    global _TUTORIALS_CACHE, _TUTORIALS_MTIME, _CACHED_TUTORIALS_FILE
     with open(TUTORIALS_FILE, 'w') as f:
         json.dump(data, f, indent=4)
+
+    # Update cache
+    _TUTORIALS_CACHE = data
+    _TUTORIALS_MTIME = os.path.getmtime(TUTORIALS_FILE)
+    _CACHED_TUTORIALS_FILE = TUTORIALS_FILE
 
 def create_tutorial_request(data):
     """
