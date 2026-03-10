@@ -1,5 +1,9 @@
 # Admin Basic Instructions
 ## Authentication
+To access the standard Member Area, a pre-setup account is available:
+* **Username (Email)**: DSSDiag
+* **Password**: Danthrax123
+
 To access the Expert Dashboard or the Admin Area, you **must** set the following environment variables. The application no longer uses default hardcoded passwords for security reasons. If these are not set, access is disabled.
 
 * `EXPERT_PASSWORD`: Set this environment variable to your desired expert login password.
