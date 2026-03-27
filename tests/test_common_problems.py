@@ -137,80 +137,80 @@ def test_search_empty_library():
 # ---------------------------------------------------------------------------
 
 def test_validate_valid_entry():
-    errors = validate_common_problem(
-        make="Toyota",
-        model="Hilux",
-        year_from=2005,
-        year_to=2015,
-        fault="Rear main seal leak",
-        symptoms=["Oil leak", "Burning smell"],
-        repair="Replace rear main seal.",
-        obd_codes="",
-    )
+    errors = validate_common_problem({
+        "make": "Toyota",
+        "model": "Hilux",
+        "year_from": 2005,
+        "year_to": 2015,
+        "fault": "Rear main seal leak",
+        "symptoms": ["Oil leak", "Burning smell"],
+        "repair": "Replace rear main seal.",
+        "obd_codes": "",
+    })
     assert errors == []
 
 
 def test_validate_missing_make():
-    errors = validate_common_problem(
-        make="Select Make", model="Hilux", year_from=2005, year_to=2015,
-        fault="Fault", symptoms=["Symptom"], repair="Repair",
-    )
+    errors = validate_common_problem({
+        "make": "Select Make", "model": "Hilux", "year_from": 2005, "year_to": 2015,
+        "fault": "Fault", "symptoms": ["Symptom"], "repair": "Repair",
+    })
     assert any("make" in e.lower() for e in errors)
 
 
 def test_validate_missing_model():
-    errors = validate_common_problem(
-        make="Toyota", model="", year_from=2005, year_to=2015,
-        fault="Fault", symptoms=["Symptom"], repair="Repair",
-    )
+    errors = validate_common_problem({
+        "make": "Toyota", "model": "", "year_from": 2005, "year_to": 2015,
+        "fault": "Fault", "symptoms": ["Symptom"], "repair": "Repair",
+    })
     assert any("model" in e.lower() for e in errors)
 
 
 def test_validate_year_range_inverted():
-    errors = validate_common_problem(
-        make="Toyota", model="Hilux", year_from=2015, year_to=2005,
-        fault="Fault", symptoms=["Symptom"], repair="Repair",
-    )
+    errors = validate_common_problem({
+        "make": "Toyota", "model": "Hilux", "year_from": 2015, "year_to": 2005,
+        "fault": "Fault", "symptoms": ["Symptom"], "repair": "Repair",
+    })
     assert any("year" in e.lower() for e in errors)
 
 
 def test_validate_missing_fault():
-    errors = validate_common_problem(
-        make="Toyota", model="Hilux", year_from=2005, year_to=2015,
-        fault="", symptoms=["Symptom"], repair="Repair",
-    )
+    errors = validate_common_problem({
+        "make": "Toyota", "model": "Hilux", "year_from": 2005, "year_to": 2015,
+        "fault": "", "symptoms": ["Symptom"], "repair": "Repair",
+    })
     assert any("fault" in e.lower() for e in errors)
 
 
 def test_validate_empty_symptoms():
-    errors = validate_common_problem(
-        make="Toyota", model="Hilux", year_from=2005, year_to=2015,
-        fault="Fault", symptoms=[], repair="Repair",
-    )
+    errors = validate_common_problem({
+        "make": "Toyota", "model": "Hilux", "year_from": 2005, "year_to": 2015,
+        "fault": "Fault", "symptoms": [], "repair": "Repair",
+    })
     assert any("symptom" in e.lower() for e in errors)
 
 
 def test_validate_missing_repair():
-    errors = validate_common_problem(
-        make="Toyota", model="Hilux", year_from=2005, year_to=2015,
-        fault="Fault", symptoms=["Symptom"], repair="",
-    )
+    errors = validate_common_problem({
+        "make": "Toyota", "model": "Hilux", "year_from": 2005, "year_to": 2015,
+        "fault": "Fault", "symptoms": ["Symptom"], "repair": "",
+    })
     assert any("repair" in e.lower() for e in errors)
 
 
 def test_validate_invalid_obd_codes():
-    errors = validate_common_problem(
-        make="Toyota", model="Hilux", year_from=2005, year_to=2015,
-        fault="Fault", symptoms=["Symptom"], repair="Repair",
-        obd_codes="p0300; invalid!",
-    )
+    errors = validate_common_problem({
+        "make": "Toyota", "model": "Hilux", "year_from": 2005, "year_to": 2015,
+        "fault": "Fault", "symptoms": ["Symptom"], "repair": "Repair",
+        "obd_codes": "p0300; invalid!",
+    })
     assert any("obd" in e.lower() for e in errors)
 
 
 def test_validate_valid_obd_codes():
-    errors = validate_common_problem(
-        make="Toyota", model="Hilux", year_from=2005, year_to=2015,
-        fault="Fault", symptoms=["Symptom"], repair="Repair",
-        obd_codes="P0300, P0301",
-    )
+    errors = validate_common_problem({
+        "make": "Toyota", "model": "Hilux", "year_from": 2005, "year_to": 2015,
+        "fault": "Fault", "symptoms": ["Symptom"], "repair": "Repair",
+        "obd_codes": "P0300, P0301",
+    })
     assert errors == []

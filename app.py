@@ -502,10 +502,17 @@ if current_page == "admin":
 
             if cp_submit:
                 symptoms_list = [s.strip() for s in cp_symptoms.splitlines() if s.strip()]
-                cp_errors = validate_common_problem(
-                    cp_make, cp_model, int(cp_year_from), int(cp_year_to),
-                    cp_fault, symptoms_list, cp_repair, cp_obd,
-                )
+                cp_data = {
+                    "make": cp_make,
+                    "model": cp_model.strip(),
+                    "year_from": int(cp_year_from),
+                    "year_to": int(cp_year_to),
+                    "fault": cp_fault.strip(),
+                    "symptoms": symptoms_list,
+                    "repair": cp_repair.strip(),
+                    "obd_codes": cp_obd.strip(),
+                }
+                cp_errors = validate_common_problem(cp_data)
                 if cp_errors:
                     for e in cp_errors:
                         st.error(e)

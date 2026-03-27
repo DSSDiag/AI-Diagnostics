@@ -290,24 +290,34 @@ def validate_tutorial_request(make, model, year, description, medium):
     return errors
 
 
-def validate_common_problem(make, model, year_from, year_to, fault, symptoms, repair, obd_codes=""):
+def validate_common_problem(data):
     """
     Validates a common problem library entry.
 
     Args:
-        make (str): Vehicle make.
-        model (str): Vehicle model.
-        year_from (int): Start year of affected range.
-        year_to (int): End year of affected range.
-        fault (str): Short fault title/name.
-        symptoms (list): List of symptom strings.
-        repair (str): Repair description.
-        obd_codes (str): OBD-II codes (optional).
+        data (dict): Dictionary containing the following fields:
+            make (str): Vehicle make.
+            model (str): Vehicle model.
+            year_from (int): Start year of affected range.
+            year_to (int): End year of affected range.
+            fault (str): Short fault title/name.
+            symptoms (list): List of symptom strings.
+            repair (str): Repair description.
+            obd_codes (str): OBD-II codes (optional).
 
     Returns:
         list: Error messages. Empty list means valid.
     """
     errors = []
+
+    make = data.get("make")
+    model = data.get("model")
+    year_from = data.get("year_from")
+    year_to = data.get("year_to")
+    fault = data.get("fault")
+    symptoms = data.get("symptoms")
+    repair = data.get("repair")
+    obd_codes = data.get("obd_codes", "")
 
     # Make
     if not make or make == "Select Make":
