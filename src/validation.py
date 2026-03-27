@@ -1,6 +1,9 @@
 import re
 from datetime import date, datetime
 
+# Pre-compiled regular expressions for performance
+SCRIPT_TAG_PATTERN = re.compile(r"<script.*?>", re.IGNORECASE | re.DOTALL)
+
 def validate_signup(name, email, password, dob, occupation):
     """
     Validates new member signup fields.
@@ -166,7 +169,7 @@ def _validate_symptoms(symptoms):
                 if other_text:
                     if len(other_text) > 500:
                         errors.append(f"{category.title()} 'Other' description must be less than 500 characters.")
-                    elif re.search(r"<script.*?>", other_text, re.IGNORECASE | re.DOTALL):
+                    elif SCRIPT_TAG_PATTERN.search(other_text):
                         errors.append(f"Invalid characters detected in {category.title()} 'Other' description.")
         
         # Error if any category has no selection
@@ -182,7 +185,7 @@ def _validate_symptoms(symptoms):
         if additional_details:
             if len(additional_details) > 2000:
                 errors.append("Additional details must be less than 2000 characters.")
-            elif re.search(r"<script.*?>", additional_details, re.IGNORECASE | re.DOTALL):
+            elif SCRIPT_TAG_PATTERN.search(additional_details):
                 errors.append("Invalid characters detected in additional details.")
     else:
         # Fallback for old string format (backward compatibility)
@@ -190,7 +193,7 @@ def _validate_symptoms(symptoms):
             errors.append("Symptoms description is required.")
         elif len(symptoms) > 1000:
             errors.append("Symptoms description must be less than 1000 characters.")
-        elif re.search(r"<script.*?>", symptoms, re.IGNORECASE | re.DOTALL):
+        elif SCRIPT_TAG_PATTERN.search(symptoms):
             errors.append("Invalid characters detected in Symptoms.")
 
     return errors
@@ -226,7 +229,7 @@ def validate_input(make, model, year, mileage, vin, engine_type, transmission_ty
         if len(last_service_date) > 100:
             errors.append("Last Service Date must be less than 100 characters.")
         # Basic check for potentially malicious content
-        elif re.search(r"<script.*?>", last_service_date, re.IGNORECASE | re.DOTALL):
+        elif SCRIPT_TAG_PATTERN.search(last_service_date):
             errors.append("Invalid characters detected in Last Service Date.")
 
     # Validate Symptoms
@@ -279,7 +282,7 @@ def validate_tutorial_request(make, model, year, description, medium):
         errors.append("Tutorial description is required.")
     elif len(desc_str) > 2000:
         errors.append("Description must be less than 2000 characters.")
-    elif re.search(r"<script.*?>", desc_str, re.IGNORECASE | re.DOTALL):
+    elif SCRIPT_TAG_PATTERN.search(desc_str):
         errors.append("Invalid characters detected in description.")
 
     # Validate Medium
