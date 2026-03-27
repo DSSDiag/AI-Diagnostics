@@ -2,8 +2,8 @@ import os
 import streamlit as st
 from src.storage import (
     create_request, get_request, get_all_requests, update_request_response,
-    update_request_files, create_user, get_user, get_all_users, verify_user,
-    update_user_status, delete_user, get_user_requests,
+    create_user, get_user, get_all_users, verify_user,
+    update_user_status, delete_user,
     create_tutorial_request, get_tutorial_request, get_all_tutorial_requests, update_tutorial_request_response
 )
 from src.validation import validate_input, validate_signup, validate_tutorial_request
