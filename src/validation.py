@@ -166,7 +166,7 @@ def _validate_symptoms(symptoms):
                 if other_text:
                     if len(other_text) > 500:
                         errors.append(f"{category.title()} 'Other' description must be less than 500 characters.")
-                    elif re.search(r"<script.*?>", other_text, re.IGNORECASE | re.DOTALL):
+                    elif re.search(r"<[^>]+>", other_text, re.IGNORECASE | re.DOTALL):
                         errors.append(f"Invalid characters detected in {category.title()} 'Other' description.")
         
         # Error if any category has no selection
@@ -182,7 +182,7 @@ def _validate_symptoms(symptoms):
         if additional_details:
             if len(additional_details) > 2000:
                 errors.append("Additional details must be less than 2000 characters.")
-            elif re.search(r"<script.*?>", additional_details, re.IGNORECASE | re.DOTALL):
+            elif re.search(r"<[^>]+>", additional_details, re.IGNORECASE | re.DOTALL):
                 errors.append("Invalid characters detected in additional details.")
     else:
         # Fallback for old string format (backward compatibility)
@@ -190,7 +190,7 @@ def _validate_symptoms(symptoms):
             errors.append("Symptoms description is required.")
         elif len(symptoms) > 1000:
             errors.append("Symptoms description must be less than 1000 characters.")
-        elif re.search(r"<script.*?>", symptoms, re.IGNORECASE | re.DOTALL):
+        elif re.search(r"<[^>]+>", symptoms, re.IGNORECASE | re.DOTALL):
             errors.append("Invalid characters detected in Symptoms.")
 
     return errors
@@ -226,7 +226,7 @@ def validate_input(make, model, year, mileage, vin, engine_type, transmission_ty
         if len(last_service_date) > 100:
             errors.append("Last Service Date must be less than 100 characters.")
         # Basic check for potentially malicious content
-        elif re.search(r"<script.*?>", last_service_date, re.IGNORECASE | re.DOTALL):
+        elif re.search(r"<[^>]+>", last_service_date, re.IGNORECASE | re.DOTALL):
             errors.append("Invalid characters detected in Last Service Date.")
 
     # Validate Symptoms
@@ -279,7 +279,7 @@ def validate_tutorial_request(make, model, year, description, medium):
         errors.append("Tutorial description is required.")
     elif len(desc_str) > 2000:
         errors.append("Description must be less than 2000 characters.")
-    elif re.search(r"<script.*?>", desc_str, re.IGNORECASE | re.DOTALL):
+    elif re.search(r"<[^>]+>", desc_str, re.IGNORECASE | re.DOTALL):
         errors.append("Invalid characters detected in description.")
 
     # Validate Medium
@@ -360,7 +360,7 @@ def validate_common_problem(make, model, year_from, year_to, fault, symptoms, re
         errors.append("Repair description is required.")
     elif len(repair_str) > 2000:
         errors.append("Repair description must be less than 2000 characters.")
-    elif re.search(r"<script.*?>", repair_str, re.IGNORECASE | re.DOTALL):
+    elif re.search(r"<[^>]+>", repair_str, re.IGNORECASE | re.DOTALL):
         errors.append("Invalid characters detected in repair description.")
 
     # OBD codes (optional)
