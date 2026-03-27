@@ -1,4 +1,5 @@
 import os
+import html
 import streamlit as st
 from src.storage import (
     create_request, get_request, get_all_requests, update_request_response,
@@ -606,8 +607,8 @@ top_col1, top_col2 = st.columns([6, 1])
 with top_col1:
     st.markdown(
         f"<span style='font-family:monospace; color:#e8820c;'>"
-        f"👤 Logged in as: <strong>{current_user['name']}</strong> "
-        f"({current_user['email']})</span>",
+        f"👤 Logged in as: <strong>{html.escape(current_user['name'])}</strong> "
+        f"({html.escape(current_user['email'])})</span>",
         unsafe_allow_html=True,
     )
 with top_col2:
