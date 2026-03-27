@@ -1,14 +1,12 @@
 import os
-import html
 import streamlit as st
 from src.storage import (
     create_request, get_request, get_all_requests, update_request_response,
     create_user, get_user, get_all_users, verify_user,
     update_user_status, delete_user,
-    create_tutorial_request, get_tutorial_request, get_all_tutorial_requests, update_tutorial_request_response,
-    create_common_problem, get_all_common_problems, delete_common_problem, search_common_problems,
+    create_tutorial_request, get_tutorial_request, get_all_tutorial_requests, update_tutorial_request_response
 )
-from src.validation import validate_input, validate_signup, validate_tutorial_request, validate_common_problem
+from src.validation import validate_input, validate_signup, validate_tutorial_request
 
 
 def _fmt_symptoms(d):
@@ -25,8 +23,8 @@ def _fmt_symptoms(d):
 st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_icon="🚗")
 
 # Passwords for expert and admin roles, loaded from environment variables
-EXPERT_PASSWORD = os.environ.get("EXPERT_PASSWORD")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+EXPERT_PASSWORD = os.environ.get("EXPERT_PASSWORD", "password123")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin456")
 
 # Common UI elements
 SYMPTOM_CATEGORIES = [
@@ -253,11 +251,11 @@ if current_page == "admin":
         st.markdown("#### Administrator Login")
         adm_pw = st.text_input("Admin Password", type="password", key="admin_pw_input")
         if st.button("Login as Admin"):
-            if ADMIN_PASSWORD and adm_pw == ADMIN_PASSWORD:
+            if adm_pw == ADMIN_PASSWORD:
                 st.session_state['admin_logged_in'] = True
                 st.rerun()
             else:
-                st.error("Incorrect admin password or admin access disabled.")
+                st.error("Incorrect admin password.")
     else:
         st.success("Logged in as Administrator")
         if st.button("Logout Admin", key="admin_logout"):
@@ -266,39 +264,16 @@ if current_page == "admin":
 
         st.markdown("---")
 
-        # ── Stats & Data Pre-processing ────────────────────────────────────
+        # ── Stats ──────────────────────────────────────────────────────────
         all_requests = get_all_requests()
         all_users = get_all_users()
 
-        pending_cnt = 0
-        completed_cnt = 0
-        requests_by_user = {}
-
-        # Consolidate metrics and request aggregation into one pass
-        for r_id, r_data in all_requests.items():
-            r_status = r_data.get('status')
-            if r_status == 'pending':
-                pending_cnt += 1
-            elif r_status == 'completed':
-                completed_cnt += 1
-
-            u_email = r_data.get('user_email', '').strip().lower()
-            if u_email:
-                if u_email not in requests_by_user:
-                    requests_by_user[u_email] = {}
-                requests_by_user[u_email][r_id] = r_data
-
-        active_users = 0
-        paused_users = 0
-        for user in all_users.values():
-            u_status = user.get('status')
-            if u_status == 'active':
-                active_users += 1
-            elif u_status == 'paused':
-                paused_users += 1
-
         total_req = len(all_requests)
+        pending_cnt = sum(1 for r in all_requests.values() if r.get('status') == 'pending')
+        completed_cnt = sum(1 for r in all_requests.values() if r.get('status') == 'completed')
         total_users = len(all_users)
+        active_users = sum(1 for u in all_users.values() if u.get('status') == 'active')
+        paused_users = sum(1 for u in all_users.values() if u.get('status') == 'paused')
 
         st.subheader("📊 Key Metrics")
         m1, m2, m3, m4, m5, m6 = st.columns(6)
@@ -313,6 +288,16 @@ if current_page == "admin":
 
         # ── Member management ──────────────────────────────────────────────
         st.subheader("👥 Member Management")
+
+        # Performance optimization: pre-fetch requests to avoid N+1 query inside loop
+        requests_by_user = {}
+        if all_requests:
+            for r_id, r_data in all_requests.items():
+                u_email = r_data.get('user_email', '').strip().lower()
+                if u_email:
+                    if u_email not in requests_by_user:
+                        requests_by_user[u_email] = {}
+                    requests_by_user[u_email][r_id] = r_data
 
         if all_users:
             for email, user in all_users.items():
@@ -378,15 +363,13 @@ if current_page == "admin":
         # ── Recent Activity ────────────────────────────────────────────────
         st.subheader("📈 Recent Activity")
         if all_requests:
-            # Use nlargest for efficient retrieval of top 10 recent items
-            import heapq
-            latest_10 = heapq.nlargest(
-                10,
+            sorted_requests = sorted(
                 all_requests.items(),
-                key=lambda x: x[1].get('timestamp', '')
+                key=lambda x: x[1].get('timestamp', ''),
+                reverse=True,
             )
             st.markdown("**Latest 10 Requests:**")
-            for req_id, data in latest_10:
+            for req_id, data in sorted_requests[:10]:
                 sicon = "✅" if data.get('status') == 'completed' else "⏳"
                 st.markdown(
                     f"{sicon} **{data.get('year', 'N/A')} {data.get('make', '?')} "
@@ -475,106 +458,6 @@ if current_page == "admin":
                         st.info(data['response'])
         else:
             st.info("No requests to display.")
-
-        st.markdown("---")
-
-        # ── Common Problems Library ────────────────────────────────────────
-        st.subheader("📚 Common Problems Library")
-        st.markdown("Add known recurring faults to the vehicle common problems database.")
-
-        with st.expander("➕ Add New Common Problem Entry", expanded=False):
-            with st.form("add_common_problem_form"):
-                cp_col1, cp_col2 = st.columns(2)
-                with cp_col1:
-                    cp_make = st.selectbox("Make", ["Select Make"] + [
-                        "Abarth", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "BYD",
-                        "Chery", "Chevrolet", "Chrysler", "Citroen", "Cupra", "Dacia", "Daewoo",
-                        "Daihatsu", "Dodge", "Ferrari", "Fiat", "Ford", "Genesis", "GWM", "Holden",
-                        "Honda", "Hyundai", "Infiniti", "Isuzu", "Jaguar", "Jeep", "Kia",
-                        "Lamborghini", "Land Rover", "LDV", "Lexus", "Mahindra", "Maserati",
-                        "Mazda", "McLaren", "Mercedes-Benz", "MG", "Mini", "Mitsubishi", "Nissan",
-                        "Opel", "Peugeot", "Porsche", "RAM", "Renault", "Rolls-Royce", "Skoda",
-                        "SsangYong", "Subaru", "Suzuki", "Tesla", "Toyota", "Volkswagen", "Volvo", "Other",
-                    ], key="cp_make")
-                    cp_model = st.text_input("Model", placeholder="e.g. Camry, Hilux", key="cp_model")
-                with cp_col2:
-                    cp_year_from = st.number_input("Year From", min_value=1980, max_value=2025, value=2000, step=1, key="cp_year_from")
-                    cp_year_to = st.number_input("Year To", min_value=1980, max_value=2025, value=2025, step=1, key="cp_year_to")
-
-                cp_fault = st.text_input("Fault / Problem Title", placeholder="e.g. Engine misfire at idle", key="cp_fault")
-                cp_symptoms = st.text_area(
-                    "Symptoms (one per line)",
-                    placeholder="Loss of power\nRough idle\nCheck engine light on",
-                    height=100, key="cp_symptoms",
-                )
-                cp_repair = st.text_area(
-                    "Repair / Fix",
-                    placeholder="Describe the typical repair procedure or parts to replace...",
-                    height=120, key="cp_repair",
-                )
-                cp_obd = st.text_input("OBD Codes (optional)", placeholder="P0300, P0301", key="cp_obd")
-
-                cp_submit = st.form_submit_button("Add to Library")
-
-            if cp_submit:
-                symptoms_list = [s.strip() for s in cp_symptoms.splitlines() if s.strip()]
-                cp_data = {
-                    "make": cp_make,
-                    "model": cp_model.strip(),
-                    "year_from": int(cp_year_from),
-                    "year_to": int(cp_year_to),
-                    "fault": cp_fault.strip(),
-                    "symptoms": symptoms_list,
-                    "repair": cp_repair.strip(),
-                    "obd_codes": cp_obd.strip(),
-                }
-                cp_errors = validate_common_problem(cp_data)
-                if cp_errors:
-                    for e in cp_errors:
-                        st.error(e)
-                else:
-                    create_common_problem({
-                        "make": cp_make,
-                        "model": cp_model.strip(),
-                        "year_from": int(cp_year_from),
-                        "year_to": int(cp_year_to),
-                        "fault": cp_fault.strip(),
-                        "symptoms": symptoms_list,
-                        "repair": cp_repair.strip(),
-                        "obd_codes": cp_obd.strip(),
-                        "added_by": "admin",
-                    })
-                    st.success("Common problem entry added to the library.")
-                    st.rerun()
-
-        all_common_problems = get_all_common_problems()
-        if all_common_problems:
-            st.markdown(f"**{len(all_common_problems)} entries in the library**")
-            for pid, prob in sorted(
-                all_common_problems.items(),
-                key=lambda x: (x[1].get('make', ''), x[1].get('model', ''), x[1].get('year_from', 0)),
-            ):
-                with st.expander(
-                    f"🔧 {prob.get('make')} {prob.get('model')} "
-                    f"({prob.get('year_from')}–{prob.get('year_to')}) — {prob.get('fault')}"
-                ):
-                    st.write(f"**Fault:** {prob.get('fault')}")
-                    st.write(f"**Vehicle:** {prob.get('make')} {prob.get('model')} "
-                             f"({prob.get('year_from')}–{prob.get('year_to')})")
-                    if prob.get('obd_codes'):
-                        st.write(f"**OBD Codes:** {prob.get('obd_codes')}")
-                    st.markdown("**Symptoms:**")
-                    for sym in prob.get('symptoms', []):
-                        st.markdown(f"- {sym}")
-                    st.markdown("**Repair:**")
-                    st.info(prob.get('repair', ''))
-                    st.caption(f"Added: {prob.get('created_at', 'N/A')}")
-                    if st.button("🗑 Delete Entry", key=f"del_prob_{pid}"):
-                        delete_common_problem(pid)
-                        st.warning("Entry deleted.")
-                        st.rerun()
-        else:
-            st.info("No common problem entries yet. Use the form above to add the first one.")
 
     # Stop rendering the rest of the page when in admin panel
     st.stop()
@@ -723,8 +606,8 @@ top_col1, top_col2 = st.columns([6, 1])
 with top_col1:
     st.markdown(
         f"<span style='font-family:monospace; color:#e8820c;'>"
-        f"👤 Logged in as: <strong>{html.escape(current_user['name'])}</strong> "
-        f"({html.escape(current_user['email'])})</span>",
+        f"👤 Logged in as: <strong>{current_user['name']}</strong> "
+        f"({current_user['email']})</span>",
         unsafe_allow_html=True,
     )
 with top_col2:
@@ -734,12 +617,11 @@ with top_col2:
 
 st.markdown("---")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "🚗 Submit Issue",
     "🔧 Expert Dashboard",
     "🔍 Check Status",
     "🎥 Custom Tutorial",
-    "📚 Common Problems",
 ])
 
 # ---------------------------------------------------------------------------
@@ -1094,11 +976,11 @@ with tab2:
     if not st.session_state['expert_logged_in']:
         password = st.text_input("Enter Expert Password", type="password")
         if st.button("Login"):
-            if EXPERT_PASSWORD and password == EXPERT_PASSWORD:
+            if password == EXPERT_PASSWORD:
                 st.session_state['expert_logged_in'] = True
                 st.rerun()
             else:
-                st.error("Incorrect password or expert access disabled.")
+                st.error("Incorrect password.")
     else:
         st.success("Logged in as Expert")
         if st.button("Logout"):
@@ -1354,74 +1236,3 @@ with tab4:
                 st.balloons()
                 st.markdown(f"**Your Tutorial Request ID is:** `{req_id}`")
                 st.warning("Please save this ID to check your tutorial status later.")
-
-
-# ---------------------------------------------------------------------------
-# TAB 5: COMMON PROBLEMS LIBRARY
-# ---------------------------------------------------------------------------
-with tab5:
-    st.header("📚 Common Problems Library")
-    st.markdown(
-        "Browse our growing database of known recurring faults for specific vehicles. "
-        "Use the filters below to find issues that match your make, model and year."
-    )
-
-    st.subheader("🔎 Search the Library")
-    search_col1, search_col2, search_col3 = st.columns(3)
-    with search_col1:
-        lib_make = st.selectbox("Filter by Make", ["All Makes"] + [
-            "Abarth", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "BYD",
-            "Chery", "Chevrolet", "Chrysler", "Citroen", "Cupra", "Dacia", "Daewoo",
-            "Daihatsu", "Dodge", "Ferrari", "Fiat", "Ford", "Genesis", "GWM", "Holden",
-            "Honda", "Hyundai", "Infiniti", "Isuzu", "Jaguar", "Jeep", "Kia",
-            "Lamborghini", "Land Rover", "LDV", "Lexus", "Mahindra", "Maserati",
-            "Mazda", "McLaren", "Mercedes-Benz", "MG", "Mini", "Mitsubishi", "Nissan",
-            "Opel", "Peugeot", "Porsche", "RAM", "Renault", "Rolls-Royce", "Skoda",
-            "SsangYong", "Subaru", "Suzuki", "Tesla", "Toyota", "Volkswagen", "Volvo", "Other",
-        ], key="lib_make")
-    with search_col2:
-        lib_model = st.text_input("Filter by Model (optional)", placeholder="e.g. Hilux, Civic", key="lib_model")
-    with search_col3:
-        lib_year = st.number_input(
-            "Filter by Year (optional, 0 = all)",
-            min_value=0, max_value=2025, value=0, step=1, key="lib_year",
-        )
-
-    search_make = None if lib_make == "All Makes" else lib_make
-    search_model = lib_model.strip() if lib_model.strip() else None
-    search_year = int(lib_year) if isinstance(lib_year, (int, float)) and lib_year > 0 else None
-
-    results = search_common_problems(make=search_make, model=search_model, year=search_year)
-
-    st.markdown("---")
-
-    if results:
-        st.markdown(f"**{len(results)} matching entr{'y' if len(results) == 1 else 'ies'} found**")
-        for pid, prob in sorted(
-            results.items(),
-            key=lambda x: (x[1].get('make', ''), x[1].get('model', ''), x[1].get('year_from', 0)),
-        ):
-            year_range = f"{prob.get('year_from')}–{prob.get('year_to')}"
-            with st.expander(
-                f"🔧 {prob.get('make')} {prob.get('model')} ({year_range}) — {prob.get('fault')}"
-            ):
-                info_col1, info_col2 = st.columns([1, 1])
-                with info_col1:
-                    st.write(f"**Vehicle:** {prob.get('make')} {prob.get('model')} ({year_range})")
-                    st.write(f"**Fault:** {prob.get('fault')}")
-                    if prob.get('obd_codes'):
-                        st.write(f"**OBD Codes:** {prob.get('obd_codes')}")
-                with info_col2:
-                    st.markdown("**Symptoms:**")
-                    for sym in prob.get('symptoms', []):
-                        st.markdown(f"- {sym}")
-                st.markdown("**Repair / Fix:**")
-                st.info(prob.get('repair', ''))
-    else:
-        if search_make or search_model or search_year:
-            st.info("No common problems found for your search criteria. Try broadening your filters.")
-        else:
-            st.info(
-                "The common problems library is empty. "
-                "Administrators can add entries via the Admin Control Panel."
-            )
