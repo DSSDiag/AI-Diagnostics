@@ -55,6 +55,16 @@ def test_get_all_users():
     assert len(users) == 2
 
 
+def test_load_users_corrupted_json():
+    # Write invalid JSON to the mocked USERS_FILE
+    with open(src.storage.USERS_FILE, "w") as f:
+        f.write("invalid-json")
+
+    # Attempt to load users, which should catch JSONDecodeError and return {}
+    users = src.storage._load_users()
+    assert users == {}
+
+
 # ---------------------------------------------------------------------------
 # verify_user
 # ---------------------------------------------------------------------------

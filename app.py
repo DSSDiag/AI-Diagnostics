@@ -1,10 +1,14 @@
+import os
+import html
 import streamlit as st
 from src.storage import (
     create_request, get_request, get_all_requests, update_request_response,
     update_request_files, create_user, get_user, get_all_users, verify_user,
     update_user_status, delete_user, get_user_requests,
+    create_tutorial_request, get_tutorial_request, get_all_tutorial_requests, update_tutorial_request_response,
+    create_common_problem, get_all_common_problems, delete_common_problem, search_common_problems,
 )
-from src.validation import validate_input, validate_signup
+from src.validation import validate_input, validate_signup, validate_tutorial_request, validate_common_problem
 
 
 def _fmt_symptoms(d):
@@ -20,9 +24,15 @@ def _fmt_symptoms(d):
 
 st.set_page_config(page_title="Automotive AI Diagnostics", layout="wide", page_icon="🚗")
 
-# Mock passwords for expert and admin roles
-EXPERT_PASSWORD = "password123"
-ADMIN_PASSWORD = "admin456"
+# Passwords for expert and admin roles, loaded from environment variables
+EXPERT_PASSWORD = os.environ.get("EXPERT_PASSWORD")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+
+# Common UI elements
+SYMPTOM_CATEGORIES = [
+    ('power', '⚡'), ('tactile', '👋'), ('audible', '🔊'),
+    ('fuel', '⛽'), ('visual', '👁️'), ('temperature', '🌡️'),
+]
 
 # ---------------------------------------------------------------------------
 # Global CSS – automotive diagnostics database / workshop desk theme
@@ -38,11 +48,14 @@ st.markdown("""
 
 /* ── Typography ─────────────────────────────────────────────────────────── */
 h1, h2, h3, h4 {
-    font-family: 'Courier New', Courier, monospace !important;
-    letter-spacing: 2px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.3px;
     color: #e8820c !important;
 }
-p, label, span, div { font-family: 'Courier New', Courier, monospace; }
+p, label, span, div {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
 
 /* ── Streamlit tabs ─────────────────────────────────────────────────────── */
 .stTabs [data-baseweb="tab-list"] {
@@ -52,8 +65,8 @@ p, label, span, div { font-family: 'Courier New', Courier, monospace; }
 }
 .stTabs [data-baseweb="tab"] {
     color: #888;
-    font-family: 'Courier New', Courier, monospace;
-    letter-spacing: 1px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: 0.3px;
     font-size: 0.85rem;
     background: #1a1a22;
     border: 1px solid #2a2a35;
@@ -68,91 +81,103 @@ p, label, span, div { font-family: 'Courier New', Courier, monospace; }
 
 /* ── Inputs ─────────────────────────────────────────────────────────────── */
 input, textarea, select {
-    background: #111318 !important;
-    color: #c8c8c8 !important;
-    border: 1px solid #333 !important;
-    font-family: 'Courier New', Courier, monospace !important;
+    background: rgba(255,255,255,0.05) !important;
+    color: #e0e0e0 !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 8px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 input:focus, textarea:focus {
     border-color: #e8820c !important;
-    box-shadow: 0 0 4px rgba(232,130,12,0.4) !important;
+    box-shadow: 0 0 0 3px rgba(232,130,12,0.2) !important;
 }
 
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
 .stButton > button {
-    background: #1a1a22;
-    color: #e8820c;
-    border: 1px solid #e8820c;
-    font-family: 'Courier New', Courier, monospace;
-    letter-spacing: 1px;
-    transition: background 0.2s;
+    background: linear-gradient(135deg, #e8820c 0%, #c96d00 100%);
+    color: #fff !important;
+    border: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(232,130,12,0.25);
 }
 .stButton > button:hover {
-    background: #e8820c;
-    color: #000;
+    background: linear-gradient(135deg, #f0900f 0%, #d97800 100%);
+    box-shadow: 0 6px 18px rgba(232,130,12,0.4);
+    transform: translateY(-1px);
+    color: #fff !important;
 }
 
 /* ── Alerts ──────────────────────────────────────────────────────────────── */
-.stAlert { border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+.stAlert {
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
 
 /* ── Login / Signup card ─────────────────────────────────────────────────── */
 .auth-card {
-    border: 2px solid #e8820c;
-    border-radius: 6px;
-    padding: 32px 36px;
-    background: rgba(232,130,12,0.04);
+    border: 1px solid rgba(232,130,12,0.25);
+    border-radius: 16px;
+    padding: 40px 44px;
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(20px);
     max-width: 520px;
     margin: 0 auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(232,130,12,0.08);
 }
 .auth-header {
     text-align: center;
-    border-bottom: 1px solid #e8820c;
-    padding-bottom: 16px;
-    margin-bottom: 24px;
+    padding-bottom: 20px;
+    margin-bottom: 8px;
+}
+.auth-logo {
+    font-size: 3rem;
+    line-height: 1;
+    margin-bottom: 14px;
+    filter: drop-shadow(0 0 12px rgba(232,130,12,0.6));
 }
 .auth-header .title-lg {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     color: #e8820c;
-    font-family: 'Courier New', Courier, monospace;
-    letter-spacing: 4px;
-    font-weight: bold;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: 3px;
+    font-weight: 800;
+    text-transform: uppercase;
 }
 .auth-header .subtitle {
-    font-size: 0.75rem;
-    color: #888;
-    letter-spacing: 2px;
-    margin-top: 4px;
-}
-.desk-scene {
-    text-align: center;
-    font-size: 2.4rem;
-    line-height: 1;
-    margin: 18px 0 10px 0;
-    letter-spacing: 6px;
-    filter: drop-shadow(0 0 6px rgba(232,130,12,0.5));
+    font-size: 0.72rem;
+    color: #666;
+    letter-spacing: 1.5px;
+    margin-top: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-transform: uppercase;
 }
 .obd-readout {
-    border: 1px solid #333;
+    border: 1px solid #2a2a35;
     background: #0a0a0f;
-    padding: 10px 14px;
-    border-radius: 3px;
+    padding: 12px 16px;
+    border-radius: 8px;
     font-size: 0.7rem;
     color: #00c851;
     font-family: 'Courier New', Courier, monospace;
-    margin: 12px 0;
+    margin: 16px 0;
     white-space: pre;
     overflow-x: auto;
 }
 .rudeness-warning {
-    background: rgba(200,30,30,0.08);
-    border: 1px solid #8b1a1a;
-    border-left: 4px solid #c0392b;
-    padding: 10px 14px;
-    border-radius: 3px;
+    background: rgba(200,30,30,0.06);
+    border: 1px solid rgba(139,26,26,0.5);
+    border-left: 3px solid #c0392b;
+    padding: 12px 16px;
+    border-radius: 8px;
     color: #e07070;
     font-size: 0.78rem;
-    font-family: 'Courier New', Courier, monospace;
-    margin: 14px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 16px 0;
+    line-height: 1.5;
 }
 
 /* ── Fixed bottom-right admin button ────────────────────────────────────── */
@@ -167,11 +192,11 @@ input:focus, textarea:focus {
     border: 1px solid #3a3a4a;
     color: #555;
     padding: 5px 11px;
-    border-radius: 3px;
+    border-radius: 6px;
     font-size: 10px;
-    font-family: 'Courier New', Courier, monospace;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     text-decoration: none;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }
 .admin-access-fixed a:hover {
     border-color: #e8820c;
@@ -180,7 +205,7 @@ input:focus, textarea:focus {
 
 /* ── Expander ────────────────────────────────────────────────────────────── */
 .streamlit-expanderHeader {
-    font-family: 'Courier New', Courier, monospace !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     background: #111318 !important;
     color: #c8c8c8 !important;
 }
@@ -228,11 +253,11 @@ if current_page == "admin":
         st.markdown("#### Administrator Login")
         adm_pw = st.text_input("Admin Password", type="password", key="admin_pw_input")
         if st.button("Login as Admin"):
-            if adm_pw == ADMIN_PASSWORD:
+            if ADMIN_PASSWORD and adm_pw == ADMIN_PASSWORD:
                 st.session_state['admin_logged_in'] = True
                 st.rerun()
             else:
-                st.error("Incorrect admin password.")
+                st.error("Incorrect admin password or admin access disabled.")
     else:
         st.success("Logged in as Administrator")
         if st.button("Logout Admin", key="admin_logout"):
@@ -241,16 +266,39 @@ if current_page == "admin":
 
         st.markdown("---")
 
-        # ── Stats ──────────────────────────────────────────────────────────
+        # ── Stats & Data Pre-processing ────────────────────────────────────
         all_requests = get_all_requests()
         all_users = get_all_users()
 
+        pending_cnt = 0
+        completed_cnt = 0
+        requests_by_user = {}
+
+        # Consolidate metrics and request aggregation into one pass
+        for r_id, r_data in all_requests.items():
+            r_status = r_data.get('status')
+            if r_status == 'pending':
+                pending_cnt += 1
+            elif r_status == 'completed':
+                completed_cnt += 1
+
+            u_email = r_data.get('user_email', '').strip().lower()
+            if u_email:
+                if u_email not in requests_by_user:
+                    requests_by_user[u_email] = {}
+                requests_by_user[u_email][r_id] = r_data
+
+        active_users = 0
+        paused_users = 0
+        for user in all_users.values():
+            u_status = user.get('status')
+            if u_status == 'active':
+                active_users += 1
+            elif u_status == 'paused':
+                paused_users += 1
+
         total_req = len(all_requests)
-        pending_cnt = sum(1 for r in all_requests.values() if r.get('status') == 'pending')
-        completed_cnt = sum(1 for r in all_requests.values() if r.get('status') == 'completed')
         total_users = len(all_users)
-        active_users = sum(1 for u in all_users.values() if u.get('status') == 'active')
-        paused_users = sum(1 for u in all_users.values() if u.get('status') == 'paused')
 
         st.subheader("📊 Key Metrics")
         m1, m2, m3, m4, m5, m6 = st.columns(6)
@@ -265,6 +313,7 @@ if current_page == "admin":
 
         # ── Member management ──────────────────────────────────────────────
         st.subheader("👥 Member Management")
+
         if all_users:
             for email, user in all_users.items():
                 status_icon = "🟢" if user.get('status') == 'active' else "🔴"
@@ -282,7 +331,7 @@ if current_page == "admin":
                         st.write(f"**Registered:** {user.get('created_at', 'N/A')}")
 
                     # Request history for this user
-                    user_reqs = get_user_requests(email)
+                    user_reqs = requests_by_user.get(email.lower().strip(), {})
                     st.markdown(f"**Diagnostic Requests:** {len(user_reqs)}")
                     if user_reqs:
                         for rid, rdata in sorted(
@@ -329,13 +378,15 @@ if current_page == "admin":
         # ── Recent Activity ────────────────────────────────────────────────
         st.subheader("📈 Recent Activity")
         if all_requests:
-            sorted_requests = sorted(
+            # Use nlargest for efficient retrieval of top 10 recent items
+            import heapq
+            latest_10 = heapq.nlargest(
+                10,
                 all_requests.items(),
-                key=lambda x: x[1].get('timestamp', ''),
-                reverse=True,
+                key=lambda x: x[1].get('timestamp', '')
             )
             st.markdown("**Latest 10 Requests:**")
-            for req_id, data in sorted_requests[:10]:
+            for req_id, data in latest_10:
                 sicon = "✅" if data.get('status') == 'completed' else "⏳"
                 st.markdown(
                     f"{sicon} **{data.get('year', 'N/A')} {data.get('make', '?')} "
@@ -412,10 +463,7 @@ if current_page == "admin":
                     if isinstance(symptoms, str):
                         st.markdown(f"**Symptoms:** {symptoms}")
                     else:
-                        for cat, icon in [
-                            ('power', '⚡'), ('tactile', '👋'), ('audible', '🔊'),
-                            ('fuel', '⛽'), ('visual', '👁️'), ('temperature', '🌡️'),
-                        ]:
+                        for cat, icon in SYMPTOM_CATEGORIES:
                             active = _fmt_symptoms(symptoms.get(cat, {}))
                             if active:
                                 st.markdown(f"**{icon} {cat.title()}:** {', '.join(active)}")
@@ -427,6 +475,106 @@ if current_page == "admin":
                         st.info(data['response'])
         else:
             st.info("No requests to display.")
+
+        st.markdown("---")
+
+        # ── Common Problems Library ────────────────────────────────────────
+        st.subheader("📚 Common Problems Library")
+        st.markdown("Add known recurring faults to the vehicle common problems database.")
+
+        with st.expander("➕ Add New Common Problem Entry", expanded=False):
+            with st.form("add_common_problem_form"):
+                cp_col1, cp_col2 = st.columns(2)
+                with cp_col1:
+                    cp_make = st.selectbox("Make", ["Select Make"] + [
+                        "Abarth", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "BYD",
+                        "Chery", "Chevrolet", "Chrysler", "Citroen", "Cupra", "Dacia", "Daewoo",
+                        "Daihatsu", "Dodge", "Ferrari", "Fiat", "Ford", "Genesis", "GWM", "Holden",
+                        "Honda", "Hyundai", "Infiniti", "Isuzu", "Jaguar", "Jeep", "Kia",
+                        "Lamborghini", "Land Rover", "LDV", "Lexus", "Mahindra", "Maserati",
+                        "Mazda", "McLaren", "Mercedes-Benz", "MG", "Mini", "Mitsubishi", "Nissan",
+                        "Opel", "Peugeot", "Porsche", "RAM", "Renault", "Rolls-Royce", "Skoda",
+                        "SsangYong", "Subaru", "Suzuki", "Tesla", "Toyota", "Volkswagen", "Volvo", "Other",
+                    ], key="cp_make")
+                    cp_model = st.text_input("Model", placeholder="e.g. Camry, Hilux", key="cp_model")
+                with cp_col2:
+                    cp_year_from = st.number_input("Year From", min_value=1980, max_value=2025, value=2000, step=1, key="cp_year_from")
+                    cp_year_to = st.number_input("Year To", min_value=1980, max_value=2025, value=2025, step=1, key="cp_year_to")
+
+                cp_fault = st.text_input("Fault / Problem Title", placeholder="e.g. Engine misfire at idle", key="cp_fault")
+                cp_symptoms = st.text_area(
+                    "Symptoms (one per line)",
+                    placeholder="Loss of power\nRough idle\nCheck engine light on",
+                    height=100, key="cp_symptoms",
+                )
+                cp_repair = st.text_area(
+                    "Repair / Fix",
+                    placeholder="Describe the typical repair procedure or parts to replace...",
+                    height=120, key="cp_repair",
+                )
+                cp_obd = st.text_input("OBD Codes (optional)", placeholder="P0300, P0301", key="cp_obd")
+
+                cp_submit = st.form_submit_button("Add to Library")
+
+            if cp_submit:
+                symptoms_list = [s.strip() for s in cp_symptoms.splitlines() if s.strip()]
+                cp_data = {
+                    "make": cp_make,
+                    "model": cp_model.strip(),
+                    "year_from": int(cp_year_from),
+                    "year_to": int(cp_year_to),
+                    "fault": cp_fault.strip(),
+                    "symptoms": symptoms_list,
+                    "repair": cp_repair.strip(),
+                    "obd_codes": cp_obd.strip(),
+                }
+                cp_errors = validate_common_problem(cp_data)
+                if cp_errors:
+                    for e in cp_errors:
+                        st.error(e)
+                else:
+                    create_common_problem({
+                        "make": cp_make,
+                        "model": cp_model.strip(),
+                        "year_from": int(cp_year_from),
+                        "year_to": int(cp_year_to),
+                        "fault": cp_fault.strip(),
+                        "symptoms": symptoms_list,
+                        "repair": cp_repair.strip(),
+                        "obd_codes": cp_obd.strip(),
+                        "added_by": "admin",
+                    })
+                    st.success("Common problem entry added to the library.")
+                    st.rerun()
+
+        all_common_problems = get_all_common_problems()
+        if all_common_problems:
+            st.markdown(f"**{len(all_common_problems)} entries in the library**")
+            for pid, prob in sorted(
+                all_common_problems.items(),
+                key=lambda x: (x[1].get('make', ''), x[1].get('model', ''), x[1].get('year_from', 0)),
+            ):
+                with st.expander(
+                    f"🔧 {prob.get('make')} {prob.get('model')} "
+                    f"({prob.get('year_from')}–{prob.get('year_to')}) — {prob.get('fault')}"
+                ):
+                    st.write(f"**Fault:** {prob.get('fault')}")
+                    st.write(f"**Vehicle:** {prob.get('make')} {prob.get('model')} "
+                             f"({prob.get('year_from')}–{prob.get('year_to')})")
+                    if prob.get('obd_codes'):
+                        st.write(f"**OBD Codes:** {prob.get('obd_codes')}")
+                    st.markdown("**Symptoms:**")
+                    for sym in prob.get('symptoms', []):
+                        st.markdown(f"- {sym}")
+                    st.markdown("**Repair:**")
+                    st.info(prob.get('repair', ''))
+                    st.caption(f"Added: {prob.get('created_at', 'N/A')}")
+                    if st.button("🗑 Delete Entry", key=f"del_prob_{pid}"):
+                        delete_common_problem(pid)
+                        st.warning("Entry deleted.")
+                        st.rerun()
+        else:
+            st.info("No common problem entries yet. Use the form above to add the first one.")
 
     # Stop rendering the rest of the page when in admin panel
     st.stop()
@@ -447,21 +595,21 @@ if 'logged_in_user' not in st.session_state:
 # ===========================================================================
 if st.session_state['logged_in_user'] is None:
 
-    # Desk scene + branding
+    # Branding card
     st.markdown("""
     <div class="auth-card">
         <div class="auth-header">
-            <div class="title-lg">DSS DIAGNOSTICS</div>
-            <div class="subtitle">AUTOMOTIVE FAULT DATABASE SYSTEM v2.0</div>
+            <div class="auth-logo">🚗</div>
+            <div class="title-lg">DSS Diagnostics</div>
+            <div class="subtitle">Automotive Fault Database System v2.0</div>
         </div>
-        <div class="desk-scene">☕ 📚 🔧 🔌 📋</div>
         <div class="obd-readout">SYSTEM READY...
 SCAN TOOL CONNECTED
 OBD-II INTERFACE: ACTIVE
 DATABASE: ONLINE  |  EXPERTS: AVAILABLE
 &gt; MEMBER LOGIN REQUIRED TO PROCEED_</div>
         <div class="rudeness-warning">
-            ⚠️ <strong>COMMUNITY STANDARDS WARNING</strong><br>
+            ⚠️ <strong>Community Standards Warning</strong><br>
             Our experts are qualified professionals who volunteer their time.
             Any abusive, rude, or disrespectful behaviour toward experts
             <strong>will result in immediate account suspension.</strong>
@@ -575,8 +723,8 @@ top_col1, top_col2 = st.columns([6, 1])
 with top_col1:
     st.markdown(
         f"<span style='font-family:monospace; color:#e8820c;'>"
-        f"👤 Logged in as: <strong>{current_user['name']}</strong> "
-        f"({current_user['email']})</span>",
+        f"👤 Logged in as: <strong>{html.escape(current_user['name'])}</strong> "
+        f"({html.escape(current_user['email'])})</span>",
         unsafe_allow_html=True,
     )
 with top_col2:
@@ -586,10 +734,12 @@ with top_col2:
 
 st.markdown("---")
 
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🚗 Submit Issue",
     "🔧 Expert Dashboard",
     "🔍 Check Status",
+    "🎥 Custom Tutorial",
+    "📚 Common Problems",
 ])
 
 # ---------------------------------------------------------------------------
@@ -944,11 +1094,11 @@ with tab2:
     if not st.session_state['expert_logged_in']:
         password = st.text_input("Enter Expert Password", type="password")
         if st.button("Login"):
-            if password == EXPERT_PASSWORD:
+            if EXPERT_PASSWORD and password == EXPERT_PASSWORD:
                 st.session_state['expert_logged_in'] = True
                 st.rerun()
             else:
-                st.error("Incorrect password.")
+                st.error("Incorrect password or expert access disabled.")
     else:
         st.success("Logged in as Expert")
         if st.button("Logout"):
@@ -998,10 +1148,7 @@ with tab2:
                         if isinstance(symptoms, str):
                             st.markdown(f"**General Description:**\n>{symptoms}")
                         else:
-                            for cat, icon in [
-                                ('power', '⚡'), ('tactile', '👋'), ('audible', '🔊'),
-                                ('fuel', '⛽'), ('visual', '👁️'), ('temperature', '🌡️'),
-                            ]:
+                            for cat, icon in SYMPTOM_CATEGORIES:
                                 active = _fmt_symptoms(symptoms.get(cat, {}))
                                 if active:
                                     st.markdown(f"**{icon} {cat.title()}:** {', '.join(active)}")
@@ -1029,18 +1176,62 @@ with tab2:
         else:
             st.info("No requests found.")
 
+        st.markdown("---")
+        st.subheader("Pending Tutorial Requests")
+        all_tutorials = get_all_tutorial_requests()
+        if all_tutorials:
+            pending_tutorials = {k: v for k, v in all_tutorials.items() if v.get('status') == 'pending'}
+
+            if not pending_tutorials:
+                st.info("No pending tutorial requests.")
+            else:
+                for tut_id, data in pending_tutorials.items():
+                    with st.expander(
+                        f"Tutorial: {data.get('year', 'N/A')} {data.get('make', '?')} "
+                        f"{data.get('model', '?')} - {tut_id[:8]}..."
+                    ):
+                        st.write(f"**Request ID:** {tut_id}")
+                        st.write(f"**Submitted:** {data.get('timestamp')}")
+                        st.write(f"**User Email:** {data.get('user_email', 'N/A')}")
+                        st.markdown("### 🚗 Vehicle Details")
+                        st.write(f"**Vehicle:** {data.get('year')} {data.get('make')} {data.get('model')}")
+                        st.markdown("### 🎥 Tutorial Details")
+                        st.write(f"**Description:** {data.get('description')}")
+                        st.write(f"**Preferred Medium:** {data.get('medium')}")
+
+                        with st.form(key=f"tutorial_response_form_{tut_id}"):
+                            tutorial_response = st.text_area(
+                                "Tutorial Content/Link", height=150,
+                                placeholder="Provide the tutorial link or instructions here...",
+                            )
+                            submit_tutorial = st.form_submit_button("Send Tutorial")
+                            if submit_tutorial:
+                                if tutorial_response:
+                                    if update_tutorial_request_response(tut_id, tutorial_response):
+                                        st.success(f"Tutorial sent for request {tut_id}!")
+                                        st.rerun()
+                                    else:
+                                        st.error("Failed to update tutorial request.")
+                                else:
+                                    st.warning("Please enter the tutorial content or link.")
+        else:
+            st.info("No tutorial requests found.")
+
 
 # ---------------------------------------------------------------------------
 # TAB 3: CHECK STATUS
 # ---------------------------------------------------------------------------
 with tab3:
-    st.header("Check Your Diagnosis Status")
+    st.header("Check Your Status")
 
     check_id = st.text_input("Enter your Request ID")
 
     if st.button("Check Status"):
         if check_id:
-            req_data = get_request(check_id.strip())
+            clean_id = check_id.strip()
+            req_data = get_request(clean_id)
+            tut_data = get_tutorial_request(clean_id) if not req_data else None
+
             if req_data:
                 st.subheader(f"Status: {req_data.get('status', 'Unknown').upper()}")
 
@@ -1070,10 +1261,7 @@ with tab3:
                 if isinstance(symptoms, str):
                     st.markdown(f"**Description:**\n>{symptoms}")
                 else:
-                    for cat, icon in [
-                        ('power', '⚡'), ('tactile', '👋'), ('audible', '🔊'),
-                        ('fuel', '⛽'), ('visual', '👁️'), ('temperature', '🌡️'),
-                    ]:
+                    for cat, icon in SYMPTOM_CATEGORIES:
                         active = _fmt_symptoms(symptoms.get(cat, {}))
                         if active:
                             st.markdown(f"**{icon} {cat.title()}:** {', '.join(active)}")
@@ -1090,5 +1278,150 @@ with tab3:
                         "Your request is currently being reviewed by an expert. "
                         "Please check back later."
                     )
+            elif tut_data:
+                st.subheader(f"Tutorial Status: {tut_data.get('status', 'Unknown').upper()}")
+
+                st.markdown("### 🚗 Vehicle Details")
+                st.write(f"**Vehicle:** {tut_data.get('year')} {tut_data.get('make')} {tut_data.get('model')}")
+
+                st.markdown("### 🎥 Tutorial Request Details")
+                st.write(f"**Description:** {tut_data.get('description')}")
+                st.write(f"**Preferred Medium:** {tut_data.get('medium')}")
+
+                if tut_data.get('status') == 'completed':
+                    st.markdown("---")
+                    st.subheader("✅ Expert Tutorial Response")
+                    st.info(tut_data.get('response'))
+                    st.caption(f"Responded on: {tut_data.get('response_timestamp')}")
+                else:
+                    st.info(
+                        "Your custom tutorial request is currently being prepared by an expert. "
+                        "Please check back later."
+                    )
             else:
                 st.error("Request ID not found. Please check and try again.")
+
+
+# ---------------------------------------------------------------------------
+# TAB 4: CUSTOM TUTORIAL
+# ---------------------------------------------------------------------------
+with tab4:
+    st.header("Request a Custom Tutorial")
+    st.markdown("Need a specific walkthrough? Request a custom instructional video or guide made just for your vehicle.")
+
+    with st.form("tutorial_form"):
+        st.subheader("Vehicle Details")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            tut_make = st.selectbox("Car Make", AUSTRALIAN_MAKES, key="tut_make")
+        with col2:
+            tut_models = MODELS_BY_MAKE.get(tut_make, ["Select Model"])
+            tut_model = st.selectbox("Car Model", tut_models, key="tut_model")
+        with col3:
+            current_year = 2025
+            years = [0] + list(range(current_year, 1979, -1))
+            tut_year = st.selectbox("Year", years, format_func=lambda x: "Select Year" if x == 0 else str(x), key="tut_year")
+
+        st.subheader("Tutorial Details")
+        tut_desc = st.text_area("What do you need a tutorial for?", height=150, placeholder="e.g. How to replace the cabin air filter, How to check transmission fluid level...")
+
+        st.subheader("Preferred Medium")
+        tut_medium = st.radio(
+            "What format would be most helpful?",
+            options=["Video", "Images", "Text/Instructions", "Whatever is most useful"],
+            index=0
+        )
+
+        tut_submitted = st.form_submit_button("Submit Request")
+
+    if tut_submitted:
+        errors = validate_tutorial_request(tut_make, tut_model, tut_year, tut_desc, tut_medium)
+        if errors:
+            for error in errors:
+                st.error(error)
+        else:
+            with st.spinner("Submitting request..."):
+                request_data = {
+                    "make": tut_make,
+                    "model": tut_model,
+                    "year": tut_year,
+                    "description": tut_desc,
+                    "medium": tut_medium,
+                    "user_email": current_user['email'],
+                }
+                req_id = create_tutorial_request(request_data)
+                st.success("Tutorial Request Submitted!")
+                st.balloons()
+                st.markdown(f"**Your Tutorial Request ID is:** `{req_id}`")
+                st.warning("Please save this ID to check your tutorial status later.")
+
+
+# ---------------------------------------------------------------------------
+# TAB 5: COMMON PROBLEMS LIBRARY
+# ---------------------------------------------------------------------------
+with tab5:
+    st.header("📚 Common Problems Library")
+    st.markdown(
+        "Browse our growing database of known recurring faults for specific vehicles. "
+        "Use the filters below to find issues that match your make, model and year."
+    )
+
+    st.subheader("🔎 Search the Library")
+    search_col1, search_col2, search_col3 = st.columns(3)
+    with search_col1:
+        lib_make = st.selectbox("Filter by Make", ["All Makes"] + [
+            "Abarth", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "BYD",
+            "Chery", "Chevrolet", "Chrysler", "Citroen", "Cupra", "Dacia", "Daewoo",
+            "Daihatsu", "Dodge", "Ferrari", "Fiat", "Ford", "Genesis", "GWM", "Holden",
+            "Honda", "Hyundai", "Infiniti", "Isuzu", "Jaguar", "Jeep", "Kia",
+            "Lamborghini", "Land Rover", "LDV", "Lexus", "Mahindra", "Maserati",
+            "Mazda", "McLaren", "Mercedes-Benz", "MG", "Mini", "Mitsubishi", "Nissan",
+            "Opel", "Peugeot", "Porsche", "RAM", "Renault", "Rolls-Royce", "Skoda",
+            "SsangYong", "Subaru", "Suzuki", "Tesla", "Toyota", "Volkswagen", "Volvo", "Other",
+        ], key="lib_make")
+    with search_col2:
+        lib_model = st.text_input("Filter by Model (optional)", placeholder="e.g. Hilux, Civic", key="lib_model")
+    with search_col3:
+        lib_year = st.number_input(
+            "Filter by Year (optional, 0 = all)",
+            min_value=0, max_value=2025, value=0, step=1, key="lib_year",
+        )
+
+    search_make = None if lib_make == "All Makes" else lib_make
+    search_model = lib_model.strip() if lib_model.strip() else None
+    search_year = int(lib_year) if isinstance(lib_year, (int, float)) and lib_year > 0 else None
+
+    results = search_common_problems(make=search_make, model=search_model, year=search_year)
+
+    st.markdown("---")
+
+    if results:
+        st.markdown(f"**{len(results)} matching entr{'y' if len(results) == 1 else 'ies'} found**")
+        for pid, prob in sorted(
+            results.items(),
+            key=lambda x: (x[1].get('make', ''), x[1].get('model', ''), x[1].get('year_from', 0)),
+        ):
+            year_range = f"{prob.get('year_from')}–{prob.get('year_to')}"
+            with st.expander(
+                f"🔧 {prob.get('make')} {prob.get('model')} ({year_range}) — {prob.get('fault')}"
+            ):
+                info_col1, info_col2 = st.columns([1, 1])
+                with info_col1:
+                    st.write(f"**Vehicle:** {prob.get('make')} {prob.get('model')} ({year_range})")
+                    st.write(f"**Fault:** {prob.get('fault')}")
+                    if prob.get('obd_codes'):
+                        st.write(f"**OBD Codes:** {prob.get('obd_codes')}")
+                with info_col2:
+                    st.markdown("**Symptoms:**")
+                    for sym in prob.get('symptoms', []):
+                        st.markdown(f"- {sym}")
+                st.markdown("**Repair / Fix:**")
+                st.info(prob.get('repair', ''))
+    else:
+        if search_make or search_model or search_year:
+            st.info("No common problems found for your search criteria. Try broadening your filters.")
+        else:
+            st.info(
+                "The common problems library is empty. "
+                "Administrators can add entries via the Admin Control Panel."
+            )
