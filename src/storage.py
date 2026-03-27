@@ -55,7 +55,7 @@ def get_all_requests():
 
 def update_request_response(request_id, response_text):
     """
-    Updates a request with the expert's diagnosis.
+    Updates a request with the expert's diagnosis and returns success status.
 
     Args:
         request_id (str): The ID of the request to update.

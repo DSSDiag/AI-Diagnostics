@@ -43,3 +43,8 @@ def test_full_workflow():
     # 5. Check All Requests
     all_reqs = get_all_requests()
     assert len(all_reqs) == 1
+
+def test_update_request_response_invalid_id():
+    """Test updating a request that doesn't exist."""
+    success = update_request_response("non-existent-id", "Some response")
+    assert success is False
