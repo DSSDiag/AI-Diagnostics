@@ -343,15 +343,15 @@ def validate_common_problem(make, model, year_from, year_to, fault, symptoms, re
     if not symptoms or (isinstance(symptoms, list) and len(symptoms) == 0):
         errors.append("At least one symptom is required.")
     elif isinstance(symptoms, list):
-        for i, sym in enumerate(symptoms):
-            sym_str = sym.strip() if sym else ""
+        stripped_symptoms = [s.strip() if s else "" for s in symptoms]
+        for i, sym_str in enumerate(stripped_symptoms):
             if not sym_str:
                 continue
             if len(sym_str) > 300:
                 errors.append(f"Symptom {i + 1} must be less than 300 characters.")
             elif re.search(r"<[^>]+>", sym_str, re.IGNORECASE | re.DOTALL):
                 errors.append(f"Invalid characters detected in symptom {i + 1}.")
-        if not any(s.strip() for s in symptoms):
+        if not any(stripped_symptoms):
             errors.append("At least one symptom is required.")
 
     # Repair
