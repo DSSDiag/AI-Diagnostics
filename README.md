@@ -91,3 +91,4 @@ The application can be configured using environment variables:
 - `ADMIN_PASSWORD`: The password required to access the Admin Area (default: `admin456`).
 - `DIAGNOSTICS_DATA_FILE`: Path to the JSON file for storing diagnostic requests (default: `diagnostics_data.json`).
 - `DIAGNOSTICS_USERS_FILE`: Path to the JSON file for storing user accounts (default: `users_data.json`).
+- `DIAGNOSTICS_TUTORIALS_FILE`: Path to the JSON file for storing tutorial requests (default: `tutorials_data.json`).
