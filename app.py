@@ -266,16 +266,39 @@ if current_page == "admin":
 
         st.markdown("---")
 
-        # ── Stats ──────────────────────────────────────────────────────────
+        # ── Stats & Data Pre-processing ────────────────────────────────────
         all_requests = get_all_requests()
         all_users = get_all_users()
 
+        pending_cnt = 0
+        completed_cnt = 0
+        requests_by_user = {}
+
+        # Consolidate metrics and request aggregation into one pass
+        for r_id, r_data in all_requests.items():
+            r_status = r_data.get('status')
+            if r_status == 'pending':
+                pending_cnt += 1
+            elif r_status == 'completed':
+                completed_cnt += 1
+
+            u_email = r_data.get('user_email', '').strip().lower()
+            if u_email:
+                if u_email not in requests_by_user:
+                    requests_by_user[u_email] = {}
+                requests_by_user[u_email][r_id] = r_data
+
+        active_users = 0
+        paused_users = 0
+        for user in all_users.values():
+            u_status = user.get('status')
+            if u_status == 'active':
+                active_users += 1
+            elif u_status == 'paused':
+                paused_users += 1
+
         total_req = len(all_requests)
-        pending_cnt = sum(1 for r in all_requests.values() if r.get('status') == 'pending')
-        completed_cnt = sum(1 for r in all_requests.values() if r.get('status') == 'completed')
         total_users = len(all_users)
-        active_users = sum(1 for u in all_users.values() if u.get('status') == 'active')
-        paused_users = sum(1 for u in all_users.values() if u.get('status') == 'paused')
 
         st.subheader("📊 Key Metrics")
         m1, m2, m3, m4, m5, m6 = st.columns(6)
@@ -290,16 +313,6 @@ if current_page == "admin":
 
         # ── Member management ──────────────────────────────────────────────
         st.subheader("👥 Member Management")
-
-        # Performance optimization: pre-fetch requests to avoid N+1 query inside loop
-        requests_by_user = {}
-        if all_requests:
-            for r_id, r_data in all_requests.items():
-                u_email = r_data.get('user_email', '').strip().lower()
-                if u_email:
-                    if u_email not in requests_by_user:
-                        requests_by_user[u_email] = {}
-                    requests_by_user[u_email][r_id] = r_data
 
         if all_users:
             for email, user in all_users.items():
@@ -365,13 +378,15 @@ if current_page == "admin":
         # ── Recent Activity ────────────────────────────────────────────────
         st.subheader("📈 Recent Activity")
         if all_requests:
-            sorted_requests = sorted(
+            # Use nlargest for efficient retrieval of top 10 recent items
+            import heapq
+            latest_10 = heapq.nlargest(
+                10,
                 all_requests.items(),
-                key=lambda x: x[1].get('timestamp', ''),
-                reverse=True,
+                key=lambda x: x[1].get('timestamp', '')
             )
             st.markdown("**Latest 10 Requests:**")
-            for req_id, data in sorted_requests[:10]:
+            for req_id, data in latest_10:
                 sicon = "✅" if data.get('status') == 'completed' else "⏳"
                 st.markdown(
                     f"{sicon} **{data.get('year', 'N/A')} {data.get('make', '?')} "
