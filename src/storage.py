@@ -7,6 +7,7 @@ from datetime import datetime
 DATA_FILE = os.getenv("DIAGNOSTICS_DATA_FILE", "diagnostics_data.json")
 USERS_FILE = os.getenv("DIAGNOSTICS_USERS_FILE", "users_data.json")
 TUTORIALS_FILE = os.getenv("DIAGNOSTICS_TUTORIALS_FILE", "tutorials_data.json")
+UPLOAD_DIR = os.getenv("DIAGNOSTICS_UPLOAD_DIR", "uploads")
 
 # In-memory caches for diagnostic data
 _DATA_CACHE = None

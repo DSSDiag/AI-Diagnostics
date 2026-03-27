@@ -958,6 +958,23 @@ with tab1:
                     "user_email": current_user['email'],
                 }
                 req_id = create_request(request_data)
+
+                if uploaded_files:
+                    from werkzeug.utils import secure_filename
+                    from src.storage import UPLOAD_DIR
+                    req_upload_dir = os.path.join(UPLOAD_DIR, req_id)
+                    os.makedirs(req_upload_dir, exist_ok=True)
+                    saved_files = []
+                    for uploaded_file in uploaded_files:
+                        filename = secure_filename(uploaded_file.name)
+                        if not filename:
+                            filename = f"file_{len(saved_files)}"
+                        file_path = os.path.join(req_upload_dir, filename)
+                        with open(file_path, "wb") as f:
+                            f.write(uploaded_file.getbuffer())
+                        saved_files.append(filename)
+                    update_request_files(req_id, saved_files)
+
                 st.success("Payment Successful! Your request has been submitted.")
                 st.balloons()
                 st.markdown(f"**Your Request ID is:** `{req_id}`")
