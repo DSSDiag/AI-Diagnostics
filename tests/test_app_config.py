@@ -45,7 +45,7 @@ def test_admin_password_env_var(monkeypatch):
         assert app.ADMIN_PASSWORD == custom_password
 
 def test_passwords_default(monkeypatch):
-    """Test that passwords default to original values when env vars are not set."""
+    """Test that passwords default to None when env vars are not set."""
     with patch.dict(sys.modules, {
         "streamlit": MagicMock(),
         "src.storage": MagicMock(),
@@ -61,5 +61,5 @@ def test_passwords_default(monkeypatch):
 
         import app
         importlib.reload(app)
-        assert app.EXPERT_PASSWORD == "password123"
-        assert app.ADMIN_PASSWORD == "admin456"
+        assert app.EXPERT_PASSWORD is None
+        assert app.ADMIN_PASSWORD is None
