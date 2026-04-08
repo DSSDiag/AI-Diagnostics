@@ -6,61 +6,21 @@ from datetime import datetime
 
 DATA_FILE = os.getenv("DIAGNOSTICS_DATA_FILE", "diagnostics_data.json")
 USERS_FILE = os.getenv("DIAGNOSTICS_USERS_FILE", "users_data.json")
-TUTORIALS_FILE = os.getenv("DIAGNOSTICS_TUTORIALS_FILE", "tutorials_data.json")
-COMMON_PROBLEMS_FILE = os.getenv("DIAGNOSTICS_COMMON_PROBLEMS_FILE", "common_problems_data.json")
-
-# In-memory caches for diagnostic data
-_DATA_CACHE = None
-_DATA_MTIME = None
-_CACHED_DATA_FILE = None
-
-# In-memory caches for user data
-_USERS_CACHE = None
-_USERS_MTIME = None
-_CACHED_USERS_FILE = None
-
-# In-memory caches for tutorial data
-_TUTORIALS_CACHE = None
-_TUTORIALS_MTIME = None
-_CACHED_TUTORIALS_FILE = None
 
 def _load_data():
-    """Loads all data from the JSON file with caching."""
-    global _DATA_CACHE, _DATA_MTIME, _CACHED_DATA_FILE
-
-    # Invalidate cache if filename has changed
-    if DATA_FILE != _CACHED_DATA_FILE:
-        _DATA_CACHE = None
-        _DATA_MTIME = None
-        _CACHED_DATA_FILE = DATA_FILE
-
+    """Loads all data from the JSON file."""
     if not os.path.exists(DATA_FILE):
-        _DATA_CACHE = {}
-        _DATA_MTIME = None
-        return _DATA_CACHE
-
+        return {}
     try:
-        current_mtime = os.path.getmtime(DATA_FILE)
-        if _DATA_CACHE is not None and _DATA_MTIME == current_mtime:
-            return _DATA_CACHE
-
         with open(DATA_FILE, 'r') as f:
-            _DATA_CACHE = json.load(f)
-            _DATA_MTIME = current_mtime
-            return _DATA_CACHE
-    except (json.JSONDecodeError, OSError):
+            return json.load(f)
+    except json.JSONDecodeError:
         return {}
 
 def _save_data(data):
-    """Saves data to the JSON file and updates the cache."""
-    global _DATA_CACHE, _DATA_MTIME, _CACHED_DATA_FILE
+    """Saves data to the JSON file."""
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=4)
-
-    # Update cache
-    _DATA_CACHE = data
-    _DATA_MTIME = os.path.getmtime(DATA_FILE)
-    _CACHED_DATA_FILE = DATA_FILE
 
 def create_request(data):
     """
@@ -95,7 +55,7 @@ def get_all_requests():
 
 def update_request_response(request_id, response_text):
     """
-    Updates a request with the expert's diagnosis.
+    Updates a request with the expert's diagnosis and returns success status.
 
     Args:
         request_id (str): The ID of the request to update.
@@ -110,95 +70,6 @@ def update_request_response(request_id, response_text):
         requests[request_id]['status'] = 'completed'
         requests[request_id]['response_timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         _save_data(requests)
-        return True
-    return False
-
-def _load_tutorials():
-    """Loads all tutorial requests from the JSON file with caching."""
-    global _TUTORIALS_CACHE, _TUTORIALS_MTIME, _CACHED_TUTORIALS_FILE
-
-    # Invalidate cache if filename has changed
-    if TUTORIALS_FILE != _CACHED_TUTORIALS_FILE:
-        _TUTORIALS_CACHE = None
-        _TUTORIALS_MTIME = None
-        _CACHED_TUTORIALS_FILE = TUTORIALS_FILE
-
-    if not os.path.exists(TUTORIALS_FILE):
-        _TUTORIALS_CACHE = {}
-        _TUTORIALS_MTIME = None
-        return _TUTORIALS_CACHE
-
-    try:
-        current_mtime = os.path.getmtime(TUTORIALS_FILE)
-        if _TUTORIALS_CACHE is not None and _TUTORIALS_MTIME == current_mtime:
-            return _TUTORIALS_CACHE
-
-        with open(TUTORIALS_FILE, 'r') as f:
-            _TUTORIALS_CACHE = json.load(f)
-            _TUTORIALS_MTIME = current_mtime
-            return _TUTORIALS_CACHE
-    except (json.JSONDecodeError, OSError):
-        return {}
-
-def _save_tutorials(data):
-    """Saves tutorial requests to the JSON file and updates the cache."""
-    global _TUTORIALS_CACHE, _TUTORIALS_MTIME, _CACHED_TUTORIALS_FILE
-    with open(TUTORIALS_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
-
-    # Update cache
-    _TUTORIALS_CACHE = data
-    _TUTORIALS_MTIME = os.path.getmtime(TUTORIALS_FILE)
-    _CACHED_TUTORIALS_FILE = TUTORIALS_FILE
-
-def create_tutorial_request(data):
-    """
-    Creates a new tutorial request.
-
-    Args:
-        data (dict): Dictionary containing tutorial request details.
-
-    Returns:
-        str: The unique tutorial request ID.
-    """
-    requests = _load_tutorials()
-    request_id = str(uuid.uuid4())
-
-    data['request_id'] = request_id
-    data['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    data['status'] = 'pending'
-    data['response'] = None
-
-    requests[request_id] = data
-    _save_tutorials(requests)
-    return request_id
-
-def get_tutorial_request(request_id):
-    """Retrieves a specific tutorial request by ID."""
-    requests = _load_tutorials()
-    return requests.get(request_id)
-
-def get_all_tutorial_requests():
-    """Retrieves all tutorial requests."""
-    return _load_tutorials()
-
-def update_tutorial_request_response(request_id, response_text):
-    """
-    Updates a tutorial request with the expert's response/link.
-
-    Args:
-        request_id (str): The ID of the tutorial request to update.
-        response_text (str): The response/tutorial link.
-
-    Returns:
-        bool: True if successful, False if request not found.
-    """
-    requests = _load_tutorials()
-    if request_id in requests:
-        requests[request_id]['response'] = response_text
-        requests[request_id]['status'] = 'completed'
-        requests[request_id]['response_timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        _save_tutorials(requests)
         return True
     return False
 
@@ -227,43 +98,20 @@ def update_request_files(request_id, filenames):
 # ---------------------------------------------------------------------------
 
 def _load_users():
-    """Loads all users from the JSON file with caching."""
-    global _USERS_CACHE, _USERS_MTIME, _CACHED_USERS_FILE
-
-    # Invalidate cache if filename has changed
-    if USERS_FILE != _CACHED_USERS_FILE:
-        _USERS_CACHE = None
-        _USERS_MTIME = None
-        _CACHED_USERS_FILE = USERS_FILE
-
+    """Loads all users from the JSON file."""
     if not os.path.exists(USERS_FILE):
-        _USERS_CACHE = {}
-        _USERS_MTIME = None
-        return _USERS_CACHE
-
+        return {}
     try:
-        current_mtime = os.path.getmtime(USERS_FILE)
-        if _USERS_CACHE is not None and _USERS_MTIME == current_mtime:
-            return _USERS_CACHE
-
         with open(USERS_FILE, 'r') as f:
-            _USERS_CACHE = json.load(f)
-            _USERS_MTIME = current_mtime
-            return _USERS_CACHE
-    except (json.JSONDecodeError, OSError):
+            return json.load(f)
+    except json.JSONDecodeError:
         return {}
 
 
 def _save_users(data):
-    """Saves users data to the JSON file and updates the cache."""
-    global _USERS_CACHE, _USERS_MTIME, _CACHED_USERS_FILE
+    """Saves users data to the JSON file."""
     with open(USERS_FILE, 'w') as f:
         json.dump(data, f, indent=4)
-
-    # Update cache
-    _USERS_CACHE = data
-    _USERS_MTIME = os.path.getmtime(USERS_FILE)
-    _CACHED_USERS_FILE = USERS_FILE
 
 
 def _hash_password(password, salt=None):
@@ -371,136 +219,3 @@ def get_user_requests(email):
         k: v for k, v in all_reqs.items()
         if v.get('user_email', '').lower() == email_key
     }
-
-
-# ---------------------------------------------------------------------------
-# Common problems library
-# ---------------------------------------------------------------------------
-
-def _load_common_problems():
-    """Loads all common problem entries from the JSON file.
-
-    On first run (file absent), the database is seeded with a curated set of
-    well-known recurring vehicle faults so the library is immediately useful.
-    """
-    if not os.path.exists(COMMON_PROBLEMS_FILE):
-        # Import here to avoid circular imports and keep the module lightweight
-        import copy
-        from src.seed_common_problems import SEED_PROBLEMS
-        seed_data = {}
-        for entry in SEED_PROBLEMS:
-            problem_id = str(uuid.uuid4())
-            entry = copy.deepcopy(entry)  # don't mutate the module-level list
-            entry['problem_id'] = problem_id
-            entry['created_at'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            seed_data[problem_id] = entry
-        _save_common_problems(seed_data)
-        return seed_data
-    try:
-        with open(COMMON_PROBLEMS_FILE, 'r') as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return {}
-
-
-def _save_common_problems(data):
-    """Saves common problem entries to the JSON file."""
-    with open(COMMON_PROBLEMS_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
-
-
-def create_common_problem(data):
-    """
-    Creates a new common problem entry.
-
-    Args:
-        data (dict): Dictionary with keys: make, model, year_from, year_to,
-                     fault, symptoms (list), repair, obd_codes (optional).
-
-    Returns:
-        str: The unique problem ID.
-    """
-    problems = _load_common_problems()
-    problem_id = str(uuid.uuid4())
-
-    data['problem_id'] = problem_id
-    data['created_at'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    problems[problem_id] = data
-    _save_common_problems(problems)
-    return problem_id
-
-
-def get_common_problem(problem_id):
-    """Retrieves a specific common problem entry by ID."""
-    problems = _load_common_problems()
-    return problems.get(problem_id)
-
-
-def get_all_common_problems():
-    """Retrieves all common problem entries."""
-    return _load_common_problems()
-
-
-def update_common_problem(problem_id, data):
-    """
-    Updates an existing common problem entry.
-
-    Args:
-        problem_id (str): The ID of the entry to update.
-        data (dict): Updated fields.
-
-    Returns:
-        bool: True if successful, False if not found.
-    """
-    problems = _load_common_problems()
-    if problem_id in problems:
-        problems[problem_id].update(data)
-        _save_common_problems(problems)
-        return True
-    return False
-
-
-def delete_common_problem(problem_id):
-    """
-    Deletes a common problem entry.
-
-    Returns:
-        bool: True if successful, False if not found.
-    """
-    problems = _load_common_problems()
-    if problem_id in problems:
-        del problems[problem_id]
-        _save_common_problems(problems)
-        return True
-    return False
-
-
-def search_common_problems(make=None, model=None, year=None):
-    """
-    Searches the common problems library by make, model and/or year.
-
-    Args:
-        make (str): Vehicle make to filter by (optional).
-        model (str): Vehicle model to filter by (optional).
-        year (int): Vehicle year to filter by (optional, matched against year_from/year_to range).
-
-    Returns:
-        dict: Matching common problem entries keyed by problem ID.
-    """
-    problems = _load_common_problems()
-    results = {}
-    for pid, entry in problems.items():
-        if make and entry.get('make', '').lower() != make.lower():
-            continue
-        if model and entry.get('model', '').lower() != model.lower():
-            continue
-        if year is not None:
-            year_from = entry.get('year_from')
-            year_to = entry.get('year_to')
-            if year_from is not None and year < year_from:
-                continue
-            if year_to is not None and year > year_to:
-                continue
-        results[pid] = entry
-    return results

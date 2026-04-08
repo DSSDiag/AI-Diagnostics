@@ -80,9 +80,26 @@ def validate_signup(name, email, password, dob, occupation):
 
     return errors
 
-def _validate_vehicle_details(make, model, year, mileage, vin, engine_type, transmission_type, fuel_type):
+def validate_input(make, model, year, mileage, vin, engine_type, transmission_type,
+                   fuel_type, last_service_date, symptoms, obd_codes):
     """
-    Validates the vehicle details for a diagnostic request.
+    Validates the input data for a diagnostic request.
+
+    Args:
+        make (str): Car make.
+        model (str): Car model.
+        year (int): Car year.
+        mileage (int): Car mileage.
+        vin (str): Vehicle Identification Number (optional).
+        engine_type (str): Engine type.
+        transmission_type (str): Transmission type.
+        fuel_type (str): Fuel type.
+        last_service_date (str): Last service date (optional).
+        symptoms (dict): Dictionary of symptoms organized by category.
+        obd_codes (str): OBD-II codes (optional).
+
+    Returns:
+        list: A list of error messages. If empty, input is valid.
     """
     errors = []
 
@@ -128,14 +145,15 @@ def _validate_vehicle_details(make, model, year, mileage, vin, engine_type, tran
     if fuel_type not in valid_fuel_types:
         errors.append("Invalid Fuel Type selected.")
 
-    return errors
+    # Validate Last Service Date (Optional)
+    if last_service_date:
+        if len(last_service_date) > 100:
+            errors.append("Last Service Date must be less than 100 characters.")
+        # Basic check for potentially malicious content
+        elif re.search(r"<script.*?>", last_service_date, re.IGNORECASE | re.DOTALL):
+            errors.append("Invalid characters detected in Last Service Date.")
 
-def _validate_symptoms(symptoms):
-    """
-    Validates the symptoms dictionary or string.
-    """
-    errors = []
-
+    # Validate Symptoms
     if isinstance(symptoms, dict):
         # Check if at least one symptom is selected in each category
         categories_to_check = ['power', 'tactile', 'audible', 'fuel', 'visual', 'temperature']
@@ -166,7 +184,7 @@ def _validate_symptoms(symptoms):
                 if other_text:
                     if len(other_text) > 500:
                         errors.append(f"{category.title()} 'Other' description must be less than 500 characters.")
-                    elif re.search(r"<[^>]+>", other_text, re.IGNORECASE | re.DOTALL):
+                    elif re.search(r"<script.*?>", other_text, re.IGNORECASE | re.DOTALL):
                         errors.append(f"Invalid characters detected in {category.title()} 'Other' description.")
         
         # Error if any category has no selection
@@ -182,7 +200,7 @@ def _validate_symptoms(symptoms):
         if additional_details:
             if len(additional_details) > 2000:
                 errors.append("Additional details must be less than 2000 characters.")
-            elif re.search(r"<[^>]+>", additional_details, re.IGNORECASE | re.DOTALL):
+            elif re.search(r"<script.*?>", additional_details, re.IGNORECASE | re.DOTALL):
                 errors.append("Invalid characters detected in additional details.")
     else:
         # Fallback for old string format (backward compatibility)
@@ -190,47 +208,8 @@ def _validate_symptoms(symptoms):
             errors.append("Symptoms description is required.")
         elif len(symptoms) > 1000:
             errors.append("Symptoms description must be less than 1000 characters.")
-        elif re.search(r"<[^>]+>", symptoms, re.IGNORECASE | re.DOTALL):
+        elif re.search(r"<script.*?>", symptoms, re.IGNORECASE | re.DOTALL):
             errors.append("Invalid characters detected in Symptoms.")
-
-    return errors
-
-def validate_input(make, model, year, mileage, vin, engine_type, transmission_type,
-                   fuel_type, last_service_date, symptoms, obd_codes):
-    """
-    Validates the input data for a diagnostic request.
-
-    Args:
-        make (str): Car make.
-        model (str): Car model.
-        year (int): Car year.
-        mileage (int): Car mileage.
-        vin (str): Vehicle Identification Number (optional).
-        engine_type (str): Engine type.
-        transmission_type (str): Transmission type.
-        fuel_type (str): Fuel type.
-        last_service_date (str): Last service date (optional).
-        symptoms (dict): Dictionary of symptoms organized by category.
-        obd_codes (str): OBD-II codes (optional).
-
-    Returns:
-        list: A list of error messages. If empty, input is valid.
-    """
-    errors = []
-
-    # Validate Vehicle Details
-    errors.extend(_validate_vehicle_details(make, model, year, mileage, vin, engine_type, transmission_type, fuel_type))
-
-    # Validate Last Service Date (Optional)
-    if last_service_date:
-        if len(last_service_date) > 100:
-            errors.append("Last Service Date must be less than 100 characters.")
-        # Basic check for potentially malicious content
-        elif re.search(r"<[^>]+>", last_service_date, re.IGNORECASE | re.DOTALL):
-            errors.append("Invalid characters detected in Last Service Date.")
-
-    # Validate Symptoms
-    errors.extend(_validate_symptoms(symptoms))
 
     # Validate OBD Codes (Optional)
     if obd_codes:
@@ -238,147 +217,5 @@ def validate_input(make, model, year, mileage, vin, engine_type, transmission_ty
             errors.append("OBD Codes must be less than 50 characters.")
         elif not re.match(r"^[A-Z0-9,\s]+$", obd_codes):
             errors.append("OBD Codes can only contain alphanumeric characters, commas, and spaces.")
-
-    return errors
-
-def validate_tutorial_request(make, model, year, description, medium):
-    """
-    Validates a tutorial request.
-
-    Args:
-        make (str): Car make.
-        model (str): Car model.
-        year (int): Car year.
-        description (str): Description of the tutorial requested.
-        medium (str): Preferred medium.
-
-    Returns:
-        list: Error messages. Empty list means valid.
-    """
-    errors = []
-
-    # Validate Make
-    if not make or make == "Select Make":
-        errors.append("Please select a Car Make from the dropdown.")
-    elif len(make) > 50:
-        errors.append("Car Make must be less than 50 characters.")
-
-    # Validate Model
-    if not model or model == "Select Model":
-        errors.append("Please select a Car Model from the dropdown.")
-    elif len(model) > 50:
-        errors.append("Car Model must be less than 50 characters.")
-
-    # Validate Year
-    if not isinstance(year, int) or year == 0 or year < 1980 or year > 2025:
-        errors.append("Please select a valid Year from the dropdown.")
-
-    # Validate Description
-    desc_str = description.strip() if description else ""
-    if not desc_str:
-        errors.append("Tutorial description is required.")
-    elif len(desc_str) > 2000:
-        errors.append("Description must be less than 2000 characters.")
-    elif re.search(r"<[^>]+>", desc_str, re.IGNORECASE | re.DOTALL):
-        errors.append("Invalid characters detected in description.")
-
-    # Validate Medium
-    valid_mediums = ["Video", "Images", "Text/Instructions", "Whatever is most useful"]
-    if medium not in valid_mediums:
-        errors.append("Invalid preferred medium selected.")
-
-    return errors
-
-
-def validate_common_problem(data):
-    """
-    Validates a common problem library entry.
-
-    Args:
-        data (dict): Dictionary containing the following fields:
-            make (str): Vehicle make.
-            model (str): Vehicle model.
-            year_from (int): Start year of affected range.
-            year_to (int): End year of affected range.
-            fault (str): Short fault title/name.
-            symptoms (list): List of symptom strings.
-            repair (str): Repair description.
-            obd_codes (str): OBD-II codes (optional).
-
-    Returns:
-        list: Error messages. Empty list means valid.
-    """
-    errors = []
-
-    make = data.get("make")
-    model = data.get("model")
-    year_from = data.get("year_from")
-    year_to = data.get("year_to")
-    fault = data.get("fault")
-    symptoms = data.get("symptoms")
-    repair = data.get("repair")
-    obd_codes = data.get("obd_codes", "")
-
-    # Make
-    if not make or make == "Select Make":
-        errors.append("Please select a vehicle make.")
-    elif len(make) > 50:
-        errors.append("Make must be less than 50 characters.")
-
-    # Model
-    if not model or model == "Select Model":
-        errors.append("Please select a vehicle model.")
-    elif len(model) > 50:
-        errors.append("Model must be less than 50 characters.")
-
-    # Year range
-    current_year = 2025
-    if not isinstance(year_from, int) or year_from < 1980 or year_from > current_year:
-        errors.append("Year From must be between 1980 and 2025.")
-    if not isinstance(year_to, int) or year_to < 1980 or year_to > current_year:
-        errors.append("Year To must be between 1980 and 2025.")
-    if isinstance(year_from, int) and isinstance(year_to, int) and year_to < year_from:
-        errors.append("Year To must be greater than or equal to Year From.")
-
-    # Fault
-    fault_str = fault.strip() if fault else ""
-    if not fault_str:
-        errors.append("Fault description is required.")
-    elif len(fault_str) > 200:
-        errors.append("Fault description must be less than 200 characters.")
-    elif re.search(r"<[^>]+>", fault_str, re.IGNORECASE | re.DOTALL):
-        errors.append("Invalid characters detected in fault description.")
-
-    # Symptoms
-    if not symptoms or (isinstance(symptoms, list) and len(symptoms) == 0):
-        errors.append("At least one symptom is required.")
-    elif isinstance(symptoms, list):
-        stripped_symptoms = [s.strip() if s else "" for s in symptoms]
-        for i, sym_str in enumerate(stripped_symptoms):
-            if not sym_str:
-                continue
-            if len(sym_str) > 300:
-                errors.append(f"Symptom {i + 1} must be less than 300 characters.")
-            elif re.search(r"<[^>]+>", sym_str, re.IGNORECASE | re.DOTALL):
-                errors.append(f"Invalid characters detected in symptom {i + 1}.")
-        if not any(stripped_symptoms):
-            errors.append("At least one symptom is required.")
-
-    # Repair
-    repair_str = repair.strip() if repair else ""
-    if not repair_str:
-        errors.append("Repair description is required.")
-    elif len(repair_str) > 2000:
-        errors.append("Repair description must be less than 2000 characters.")
-    elif re.search(r"<[^>]+>", repair_str, re.IGNORECASE | re.DOTALL):
-        errors.append("Invalid characters detected in repair description.")
-
-    # OBD codes (optional)
-    if obd_codes:
-        obd_str = obd_codes.strip()
-        if len(obd_str) > 100:
-            errors.append("OBD codes must be less than 100 characters.")
-        elif not re.match(r"^[A-Z0-9,\s]+$", obd_str):
-            errors.append("OBD codes can only contain alphanumeric characters, commas, and spaces.")
 
     return errors

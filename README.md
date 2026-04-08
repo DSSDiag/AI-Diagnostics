@@ -63,7 +63,7 @@ This application allows car owners to submit detailed reports of their vehicle i
 
 3. **Expert Flow**:
    - Go to the **"Expert Dashboard (For Mechanics)"** tab.
-   - Login with your configured expert password. This must be configured via the `EXPERT_PASSWORD` environment variable.
+   - Login with the password: `password123`.
    - Select a pending request to review.
    - Type your diagnosis and click **"Send Diagnosis"**.
 
@@ -73,7 +73,7 @@ This application allows car owners to submit detailed reports of their vehicle i
 
 5. **Admin Flow**:
    - Go to the **"Admin Area"** tab.
-   - Login with your configured admin password. This must be configured via the `ADMIN_PASSWORD` environment variable.
+   - Login with the password: `admin456`.
    - View key metrics, recent activity, and full request details.
 
 ## Project Structure
@@ -82,12 +82,3 @@ This application allows car owners to submit detailed reports of their vehicle i
 - `src/storage.py`: Handles data persistence (saving/loading requests).
 - `src/validation.py`: Validates all form inputs before a request is created.
 - `requirements.txt`: Python dependencies.
-
-## Configuration
-
-The application can be configured using environment variables:
-
-- `EXPERT_PASSWORD`: The password required to access the Expert Dashboard. This must be set for access to be granted.
-- `ADMIN_PASSWORD`: The password required to access the Admin Area. This must be set for access to be granted.
-- `DIAGNOSTICS_DATA_FILE`: Path to the JSON file for storing diagnostic requests (default: `diagnostics_data.json`).
-- `DIAGNOSTICS_USERS_FILE`: Path to the JSON file for storing user accounts (default: `users_data.json`).
