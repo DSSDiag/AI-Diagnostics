@@ -8,15 +8,5 @@
         "salt": "193e1ceb5c9088c2a8884801c736dd7a",
         "status": "active",
         "created_at": "2026-03-01 05:19:09"
-    },
-    "dssdiag": {
-        "email": "dssdiag",
-        "name": "DSS Admin",
-        "dob": "1980-01-01",
-        "occupation": "Administrator",
-        "password_hash": "1ecfc00ffc63aa79985c12d20b0f3edad0af54af66baec1089c42989eba7fd07",
-        "salt": "c57483cf650864a810c357dbe653d34e",
-        "status": "active",
-        "created_at": "2026-03-10 15:26:51"
     }
 }
