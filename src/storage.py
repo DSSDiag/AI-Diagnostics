@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import json
 import os
@@ -385,7 +386,6 @@ def _load_common_problems():
     """
     if not os.path.exists(COMMON_PROBLEMS_FILE):
         # Import here to avoid circular imports and keep the module lightweight
-        import copy
         from src.seed_common_problems import SEED_PROBLEMS
         seed_data = {}
         for entry in SEED_PROBLEMS:
